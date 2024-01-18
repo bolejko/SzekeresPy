@@ -16,7 +16,7 @@ SzekeresPy is a Python package for cosmological calculations using the Szekeres 
 
 
 ## Installation 
-To compile the code open, navigate to the folder with the above files and run from the file `compile_single` or `compile_openmp` (for openMP)
+To compile the code, navigate to the folder with the above files and run the terminal commands listed either in the file `compile_single` or `compile_openmp` (for openMP)
 
 
 ## Running the code

@@ -1,5 +1,5 @@
 ##########################################################################################################
-# SzekeresPy ver. 0.1 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.11 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: sample.py 
 # 
@@ -56,7 +56,7 @@ print("FLRW background at redshft {:.2f}, H(z) = {:.2f}, Om(z) = {:.2f}, and Ol(
 #setting the position of the observer, and checking the density, expansion, shear, weyl curvature at their locations 
 t = 0 
 r = 10.0 
-theta = 0.95*np.pi 
+theta = 0.5*np.pi 
 phi = np.pi
 redshift = 0.0
 density, expansion, shear, weyl  = szekeres_cosmo.fluid(t,r,theta,phi,redshift)  

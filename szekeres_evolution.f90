@@ -1,5 +1,5 @@
 !########################################################################################################
-! SzekeresPy ver 0.1 - Python package for cosmological calculations using the Szekeres Cosmological Model
+! SzekeresPy ver 0.11 - Python package for cosmological calculations using the Szekeres Cosmological Model
 ! 
 ! File: szekeres_evolution.f90
 ! 
@@ -96,30 +96,7 @@ implicit none
 end program szekeres_evolution
 
 !------------------------------------
-subroutine link_single(pypac,pyszek,point,npypac,npyszek,npoint,fluid)
-    implicit none
-    integer, intent(in) :: npypac
-    integer, intent(in) :: npyszek
-    integer, intent(in) :: npoint
-    double precision, dimension(npypac), intent(in) :: pypac
-    double precision, dimension(npyszek), intent(in) :: pyszek   
-    double precision, dimension (npoint), intent(in) :: point 
-    double precision, dimension (npoint) :: szpoint    
-    double precision :: redshift,time
-    double precision, dimension (100) :: szpac  
-    double precision,  dimension (10), intent(out) :: fluid
 
-    szpac(100) = 5.0
-    call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
-    redshift = point(5)    
-    call time_evolution(szpac,redshift,time)
-    szpoint = point 
-    szpoint(6) = time
-    szpoint(7) = 1.0
-    call fluid_variables(szpac,szpoint, npoint, fluid)
-    
-end subroutine link_single
-!------------------------------------
 subroutine link_point(input_data,rho,tht,shr,wey,ric,arl,prp)
     implicit none
 
@@ -248,7 +225,7 @@ subroutine link_multi(input_data,rho,tht,shr,wey,ric,arl,prp)
         arl(ig) = fluid(6)
         prp(ig) = fluid(7)
     enddo   
- !$OMP END PARALLEL DO   
+!$OMP END PARALLEL DO   
     
     
 end subroutine link_multi
@@ -707,7 +684,7 @@ subroutine age_from_initial(szpac,z_initial,time)
         ti = t
         ai = a
     enddo
-    time = t*szpac(25)  
+    time = t 
 end subroutine age_from_initial
 !--------------------------------------------------
 subroutine redlcdm(szpac,time,redshift)
@@ -795,7 +772,7 @@ subroutine szekeres_specifics(szpac,r)
     else
        s = r**alpha
        sr = alpha*(r**(alpha-1.0))
-       srr = alpha**(alpha-1.0)*(r**(alpha-2.0))
+       srr = alpha*(alpha-1.0)*(r**(alpha-2.0))
     endif
 
 
@@ -923,8 +900,6 @@ subroutine parameter_values(npypac,pypac, npyszek,pyszek, szpac)
     szpac(3) = omega_matter
     szpac(4) = omega_baryon 
     szpac(5) = omega_cold   
-    szpac(5) = T0    
-    szpac(6) = Neff
     szpac(7) = omega_radiation
     szpac(9) = omega_curvature
     
@@ -953,7 +928,7 @@ subroutine parameter_values(npypac,pypac, npyszek,pyszek, szpac)
     szpac(54) = dipole
 
     call age_from_initial(szpac,z_initial, age)
-    szpac(10) = light_speed*age
+    szpac(10) = age
     
 end subroutine parameter_values
 

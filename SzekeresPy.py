@@ -1,5 +1,5 @@
 ##########################################################################################################
-# SzekeresPy ver. 0.1 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.11 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: SzekeresPy.py 
 # 
@@ -38,9 +38,7 @@
 # SOFTWARE.
 ##########################################################################################################
 
-
 import numpy as np
-
 import szekeres_evolution as fortran_evolution
 
 
@@ -65,25 +63,12 @@ class Szekeres:
         Odez =   (self.cospar[2])/(self.E(z)**2)
         return Odez  #returns omega_lambda
 	
-    def fluid(self,t,r,theta,phi,redshift,fluid_flag = None):
-        if fluid_flag == None:
-            fluid_flag = 'density'
-        if fluid_flag == 'density':
-            fluid_flag = 0
-        if fluid_flag == 'expansion':
-            fluid_flag = 1
-        if fluid_flag == 'shear':
-            fluid_flag = 2
-        if fluid_flag == 'weyl':
-            fluid_flag = 3
-        if fluid_flag == 'ricci':
-            fluid_flag = 4
+    def fluid(self,t,r,theta,phi,redshift):
         point = np.zeros(7)
         point = t,r,theta,phi,redshift,1,1
         npoint = len(point)
         ncospar = len(self.cospar)
         ninhomog = len(self.szpar)
-
         Ngrid = 1   
         nv = Ngrid*np.ones(1)
         aa = np.append(self.cospar,self.szpar)
@@ -92,38 +77,13 @@ class Szekeres:
         rho,tht,shr,wey,ric,arl,prp = fortran_evolution.link_point(input_data)
         return rho,tht,shr,wey
                        
-    def fluid_1d(self,t, r, theta, phi, redshift, fluid_flag = None, radius_flag = None, Ngrid = None):
-
+    def fluid_1d(self,t, r, theta, phi, redshift):
         point = np.zeros(7)
         point = t,r,theta,phi,redshift,1,1
         npoint = len(point)
         ncospar = len(self.cospar)
         ninhomog = len(self.szpar)
         fluid = np.zeros(10) 
-
-        if fluid_flag == None:
-            fluid_flag = 'density'
-        if radius_flag == None:
-            radius_flag = 'areal'
-        if fluid_flag == 'density':
-            fluid_flag = 0
-        if fluid_flag == 'expansion':
-            fluid_flag = 1
-        if fluid_flag == 'shear':
-            fluid_flag = 2
-        if fluid_flag == 'weyl':
-            fluid_flag = 3
-        if fluid_flag == 'ricci':
-            fluid_flag = 4
-        if radius_flag == 'areal':
-            radius_flag  = 6  
-        if radius_flag == 'proper':
-            radius_flag  = 7
-        if Ngrid == None:
-            Ngrid = 100      
-        if Ngrid < 1 or Ngrid > 1000:
-           print("Number of points should be between 1 and 1000, Ngrid = 1000 selected")
-           Ngrid = 1000
         Ngrid = 100    
         nv = Ngrid*np.ones(1)
         aa = np.append(self.cospar,self.szpar)
@@ -131,7 +91,6 @@ class Szekeres:
         input_data = np.append(aa,bb)
         rho,tht,shr,wey,ric,arl,prp = fortran_evolution.link_multi(input_data)
         radius = prp
-
         return prp,rho,tht,shr,wey
 
 def initiate(astropy_cosmo=None, inhomog_cosmo=None):

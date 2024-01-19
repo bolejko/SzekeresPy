@@ -1,45 +1,27 @@
 !########################################################################################################
-! SzekeresPy ver 0.11 - Python package for cosmological calculations using the Szekeres Cosmological Model
+! SzekeresPy ver. 0.16 - Python package for cosmological calculations using the Szekeres Cosmological Model
 ! 
-! File: szekeres_evolution.f90
+! File: szekeres_fortran.f90
 ! 
 ! Author: Krzysztof Bolejko
 ! 
-! Licence to use: restrictive licence
+! Intended use: research and education
 ! 
-! Intended use: educational purposes only
+! Licence to use: BSD-2-Clause ("FreeBSD License")
 ! 
 ! Copyright (c) 2024 Krzysztof Bolejko
-!
-! The Author grants a licence, free of charge, to any other person obtaining a copy
-! of this software and associated documentation files (the "Software"), to deal
-! in the Software with restrictions, including limitation of the rights
-! to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-! copies of the Software, subject to the following conditions:
-!
-! The above copyright notice and this permission notice must be included in all
-! copies or substantial portions of the Software.
-!
-! The intended use of this Software is for educational purposes only,
-! and it is explicitly prohibited to use, copy, modify, merge, publish, 
-! distribute, sublicense, and/or sell copies of the Software for any purposes
-! other than educational purposes. 
 ! 
-! Any other use of this Software, or any dealing in this Software other than
-! as described in this notice is prohibited. The use of this Software by entities
-! other than humans is prohibited.
-!
-! THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-! IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-! FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-! AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-! LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-! OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-! SOFTWARE.
+! Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+! 
+! 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+! 
+! 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+! 
+! THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 !########################################################################################################
 
 
-program szekeres_evolution
+program szekeres_fortran
 implicit none
     integer :: npypac,npyszek,I
     integer, parameter :: npoint = 7
@@ -93,7 +75,7 @@ implicit none
 
 
 
-end program szekeres_evolution
+end program szekeres_fortran
 
 !------------------------------------
 
@@ -106,7 +88,8 @@ subroutine link_point(input_data,rho,tht,shr,wey,ric,arl,prp)
     integer, parameter :: npypac = 15
     integer, parameter :: npyszek = 15
     integer, parameter :: npoint = 7
-    integer :: ngrid
+    integer, parameter :: ngrid = 100
+    integer :: ngrid000
     double precision :: dr
     double precision, dimension(npypac)  :: pypac 
     double precision, dimension(npyszek) :: pyszek   
@@ -117,6 +100,9 @@ subroutine link_point(input_data,rho,tht,shr,wey,ric,arl,prp)
     double precision,  dimension (10) :: fluid
     double precision, intent(out) :: rho,tht,shr,wey,ric,arl,prp
 
+    szpac(100) = 2
+
+
     rho = 0.0d0
     tht = 0.0d0
     shr = 0.0d0
@@ -125,11 +111,11 @@ subroutine link_point(input_data,rho,tht,shr,wey,ric,arl,prp)
     ric = 0.0d0
     arl = 0.0d0
     prp = 0.0d0
-    pypac(1:15)  =  input_data(0:14)
-    pyszek(1:15) =  input_data(15:29)
-    point(1:7)  =  input_data(30:36)
-    ngrid = int(input_data(37))
-    dr = point(2)/(1.0d0*ngrid)   
+
+    ngrid000 = int(input_data(0))
+    pypac(1:15)  =  input_data(1:15)
+    pyszek(1:15) =  input_data(16:30)
+    point(1:7)  =  input_data(31:37)
     redshift = point(5) 
     call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
     call time_evolution(szpac,redshift,time)
@@ -165,7 +151,10 @@ subroutine link_multi(input_data,rho,tht,shr,wey,ric,arl,prp)
     integer, parameter :: npypac = 15
     integer, parameter :: npyszek = 15
     integer, parameter :: npoint = 7
-    integer :: ngrid, ig
+
+    integer, parameter :: ngrid = 100
+
+    integer :: ngrid000, ig
     double precision :: dr
 
 
@@ -178,7 +167,10 @@ subroutine link_multi(input_data,rho,tht,shr,wey,ric,arl,prp)
     double precision, dimension (100) :: szpac  
     double precision,  dimension (10) :: fluid
 
-    double precision,  dimension (100), intent(out) :: rho,tht,shr,wey,ric,arl,prp
+    double precision, dimension (0:(ngrid-1)), intent(out) :: rho,tht,shr,wey,ric,arl,prp
+
+
+    szpac(100) = 2
 
     rho = 0.0d0
     tht = 0.0d0
@@ -188,10 +180,13 @@ subroutine link_multi(input_data,rho,tht,shr,wey,ric,arl,prp)
     ric = 0.0d0
     arl = 0.0d0
     prp = 0.0d0
-    pypac(1:15)  =  input_data(0:14)
-    pyszek(1:15) =  input_data(15:29)
-    point(1:7)  =  input_data(30:36)
-    ngrid = int(input_data(37))
+
+    ngrid000 = int(input_data(0))
+    pypac(1:15)  =  input_data(1:15)
+    pyszek(1:15) =  input_data(16:30)
+    point(1:7)  =  input_data(31:37)
+
+
     dr = point(2)/(1.0d0*ngrid)   
     redshift = point(5) 
     call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
@@ -204,11 +199,11 @@ subroutine link_multi(input_data,rho,tht,shr,wey,ric,arl,prp)
 
 !$OMP PARALLEL DO DEFAULT(NONE) &
 !$OMP PRIVATE(ig,szpac,szpoint,fluid) &
-!$OMP SHARED(pypac,pyszek,point,ngrid,dr,redshift,time,input_data,rho,tht,shr,wey,ric,arl,prp)
+!$OMP SHARED(pypac,pyszek,point,dr,redshift,time,input_data,rho,tht,shr,wey,ric,arl,prp)
     
-    do ig=1,ngrid
+    do ig=0,ngrid-1
         szpoint(1) = point(1)
-        szpoint(2) = ig*dr
+        szpoint(2) = (ig+1)*dr
         szpoint(3) = point(3)
         szpoint(4) = point(4)
         szpoint(5) = redshift
@@ -231,6 +226,315 @@ subroutine link_multi(input_data,rho,tht,shr,wey,ric,arl,prp)
 end subroutine link_multi
 
 !------------------------------------
+subroutine link_null(input_data, temporal, radial, thetal, phial,redshiftal)
+    implicit none
+
+    double precision, dimension(0:44), intent(in) :: input_data
+    
+    integer, parameter :: npypac = 15
+    integer, parameter :: npyszek = 15
+    integer, parameter :: npoint = 7
+    integer, parameter :: ndirection = 7
+
+    integer, parameter :: ngrid = 100
+    integer :: ngrid000, ig
+
+
+    double precision, dimension(npypac)  :: pypac 
+    double precision, dimension(npyszek) :: pyszek   
+    double precision, dimension(npoint)  :: point
+    double precision, dimension(ndirection)  :: direction    
+
+    double precision, dimension (npoint) :: szpoint    
+    double precision :: redshift,time, ngz
+    double precision, dimension (100) :: szpac  
+    
+
+    double precision, dimension (0:(ngrid-1)), intent(out) :: temporal, radial, thetal, phial,redshiftal
+
+
+    szpac(100) = 2
+    temporal = 0.0d0
+    radial = 0.0d0
+    thetal = 0.0d0
+    phial = 0.0d0
+   
+    ngrid000 = int(input_data(0))
+
+    pypac(1:15)  =  input_data(1:15)
+    pyszek(1:15) =  input_data(16:30)
+    point(1:7)  =  input_data(31:37)
+    direction(1:7)  =  input_data(38:44)
+    redshift = point(5) 
+    
+    
+
+    call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
+    call time_evolution(szpac,redshift,time)
+    szpoint = point 
+    szpoint(6) = time
+    szpoint(7) = 1.0
+    
+    print *, 'We are about to start light propagation till z =', redshift
+    print *, '.... unable to proceed ...'
+    print *, 'that part of the code is not there yet'
+
+
+
+    ngz = redshift/(ngrid*1.0d0 - 1.0d0)
+    do ig = 0,ngrid-1
+        redshiftal(ig) = ig*ngz
+    enddo
+
+    call light_propagation(szpac,ngrid,npoint,szpoint,temporal, radial, thetal, phial,redshiftal)
+    
+    
+end subroutine link_null
+
+!------------------------------------
+subroutine light_propagation(szpac,ngrid,npoint,szpoint,temporal, radial, thetal, phial,redshiftal)
+    implicit none
+    double precision,  dimension (100) :: szpac  
+    integer, intent(in) :: ngrid, npoint
+    double precision, dimension (npoint) :: szpoint      
+    double precision, dimension (0:(ngrid-1)), intent(in) :: redshiftal
+    double precision, dimension (0:(ngrid-1)), intent(out) :: temporal, radial, thetal, phial
+    double precision, dimension(4) :: PV,PVi,PVii,NV,NVi,NVii,AV
+    double precision, dimension(7,4) :: PRK,NRK
+    integer :: Ui,I,ig
+    double precision :: RA,DEC
+    double precision :: ds,dss
+
+    RA = 0.0d0
+    DEC = 0.0d0
+
+    temporal = 0.0
+    radial = 0.0 
+    thetal = 0.0
+    phial = 0.0
+      
+
+    Ui = 2500000
+	dss = 0.0001d0
+	ds = dss
+
+
+    call initial_conditions(szpac,npoint,szpoint, RA,DEC,PV,NV,AV)
+	PVi=PV
+	NVi=NV
+	PVii=PV
+	NVii=NV
+	PRK = 0.0d0
+	NRK = 0.0d0
+
+
+
+
+
+end subroutine light_propagation
+!------------------------------------
+subroutine initial_conditions(szpac,npoint,szpoint, RA,DEC,PV,NV,AV)
+    implicit none
+    double precision,  intent(inout), dimension (100) :: szpac 
+    integer, intent(in) :: npoint    
+    double precision, dimension (npoint) :: szpoint      
+    double precision, intent(in) :: RA,DEC
+    double precision, intent(in), dimension(4) :: PV,NV,AV
+
+
+
+	!call getchristofells(zpar,PV,DRV,GAM,GIJ)
+
+    !christofells(szpac,position_vector,metric,GAMMA)
+	!call getnullinitial(RA,DEC,DRV,GIJ,NV)
+
+    !call null_initial(RA,DEC,DRV,GIJ,NV)
+
+
+
+
+
+end subroutine initial_conditions
+!------------------------------------
+subroutine null_initial(RA,DEC,DRV,GIJ,NV)
+
+	!subroutine getnullinitial(RA,DEC,DRV,GIJ,NV)
+	implicit none
+	integer I,J,K
+	double precision THETA,PHI,RA,DEC,pi,DRV(20)
+	double precision GIJ(4,4),PV(4), NV(4),NVN(4),wt
+
+! NV - null vector in Szekeres coordiantes
+! NVN - null vector in orthonormal frame
+! k^t=NV(1),k^r=NV(2),k^theta=NV(3),k^phi=NV(4)
+
+	NVN(1) = 1.0
+        NVN(2) =  dcos(RA)*dcos(DEC) 
+	NVN(3) = -dsin(DEC) 
+	NVN(4) =  dsin(RA)*dcos(DEC) 
+	
+	NV(1) = NVN(1)
+	NV(2) = NVN(2)*DRV(12)
+	NV(3) = NVN(2)*DRV(13)+NVN(3)/dsqrt(dabs(GIJ(3,3)))
+	NV(4) = NVN(4)/dsqrt(dabs(GIJ(4,4)))
+
+	NV = -1.0*NV
+
+	wt = 0d0
+	do J=2,4
+		do I=2,4
+		wt = wt + (GIJ(I,J)*NV(I)*NV(J))
+		enddo
+	enddo
+	NV = NV/dsqrt(dabs(wt))
+	NV(1) = -1.0d0
+
+
+	end
+    
+
+
+
+
+
+
+!------------------------------------
+subroutine christofells(szpac,position_vector,metric,GAMMA)
+    implicit none
+    integer, parameter :: npoint = 7
+    double precision,  intent(inout), dimension (100) :: szpac 
+    double precision, dimension(4), intent(in)        :: position_vector
+    double precision, dimension(npoint)                  :: point = 0.0d0  
+    double precision, dimension(4,4), intent(out)   :: metric 
+    double precision, dimension(4,4,4), intent(out) :: GAMMA 
+    double precision :: t,r,th,ph,s3,c3,s4,c4,mc3,mk
+    double precision :: PSr,QSr,SSr,PSrr,QSrr,SSrr
+    double precision :: p2,ppt,ppr,pprt,pprr
+    double precision :: fp,f1,fp1,f3,fr3,f4,fp4,f5
+    double precision :: grr,gr3,gr4,rr3,rp3,frrr
+    double precision :: aR,aRt, aRr, aRrr, aRtr, aRtrr
+    double precision :: ro0,rr,rt,rtr,rrr
+    double precision :: m,mr,mrr,k,kr,krr,q,qr,qrr,p,pr,prr,s,sr,srr
+
+    t  = position_vector(1)
+    r  = position_vector(2)
+    th = position_vector(3)
+    ph = position_vector(4)
+    point(1:4) = position_vector(1:4)
+    call areal_radius(szpac,point,npoint,aR,aRt, aRr, aRrr, aRtr, aRtrr)
+    ro0 = aR
+    rr  = aRr
+    rt  = aRt
+    rtr = aRtr
+    rrr = aRrr
+    call szekeres_specifics(szpac,r)
+    m    = szpac(61) 
+    mr   = szpac(62) 
+    mrr  = szpac(63) 
+    k    = szpac(64)
+    kr   = szpac(65) 
+    krr  = szpac(66) 
+    q    = szpac(67) 
+    qr   = szpac(68) 
+    qrr  = szpac(69) 
+    p    = szpac(70) 
+    pr   = szpac(71) 
+    prr  = szpac(72) 
+    s    = szpac(73) 
+    sr   = szpac(74) 
+    srr  = szpac(75) 
+    s3= sin(th)
+    c3= cos(th)
+    s4= sin(ph)
+    c4= cos(ph)
+    mc3= 1.0d0-c3
+    mk= 1.0d0-k
+    kr= kr
+    PSr= pr/s
+    QSr= qr/s
+    SSr= sr/s
+    PSrr= prr/s
+    QSrr= qrr/s
+    SSrr= srr/s
+    p2= ro0*ro0
+    ppt= rt/ro0
+    ppr= rr/ro0
+    pprt= rtr/ro0
+    pprr= rrr/ro0
+    f1= PSr*c4+QSr*s4
+    fp1= PSrr*c4+QSrr*s4
+    f3= QSr*c4-PSr*s4
+    fr3= QSrr*c4-PSrr*s4-f3*SSr
+    f4= f1*s3+SSr*c3
+    fp4= fp1*s3+SSrr*c3
+    f5= SSr**2*s3**2+2.0d0*SSr*f1*s3*mc3+mc3**2*(PSr**2+QSr**2)
+    fp= ppr+f4
+    grr= f5+fp**2/mk
+    gr3= f1*mc3+SSr*s3
+    gr4= mc3*s3*f3
+    rr3= (fp1-f1*SSr)*mc3 + (SSrr-SSr**2)*s3
+    rp3= f1*c3-SSr*s3
+    frrr= 5d-1*kr/mk 
+    frrr=frrr+(pprr-ppr**2+fp4-SSr*f4-gr3*rp3+mc3*f3**2-f5*mk)/fp
+    metric=0.0d0
+    GAMMA=0.0d0
+    metric(1,1)= 1.0d0
+    metric(2,2)= -p2*grr
+    metric(2,3)=  p2*gr3
+    metric(3,2)= metric(2,3)
+    metric(2,4)= -p2*gr4
+    metric(4,2)= metric(2,4)
+    metric(3,3)= -p2
+    metric(4,4)= metric(3,3)*s3**2
+    GAMMA(1,2,2)= p2*(ppt*f5+(pprt+ppt*f4)*fp/mk)
+    GAMMA(1,2,3)= -ppt*metric(2,3)
+    GAMMA(1,3,2)= -ppt*metric(2,3)
+    GAMMA(1,3,3)= -ppt*metric(3,3)
+    GAMMA(1,2,4)= -ppt*metric(2,4)
+    GAMMA(1,4,2)= -ppt*metric(2,4)
+    GAMMA(1,4,4)= -ppt*metric(4,4)
+    GAMMA(2,1,2)= (pprt+ppt*f4)/fp
+    GAMMA(2,2,1)= (pprt+ppt*f4)/fp
+    GAMMA(2,2,2)=  ppr+ frrr
+    GAMMA(2,2,3)= (gr3*mk+rp3)/fp
+    GAMMA(2,3,2)= (gr3*mk+rp3)/fp
+    GAMMA(2,2,4)= (1.0d0-mc3*mk)*s3*f3/fp
+    GAMMA(2,4,2)= (1.0d0-mc3*mk)*s3*f3/fp
+    GAMMA(2,3,3)= -mk/fp
+    GAMMA(2,4,4)= -mk*s3**2/fp
+    GAMMA(3,1,2)= (pprt-ppr*ppt)*gr3/fp
+    GAMMA(3,2,1)= (pprt-ppr*ppt)*gr3/fp
+    GAMMA(3,1,3)= ppt
+    GAMMA(3,3,1)= ppt
+    GAMMA(3,2,2)= gr3*frrr -fp*(gr3+rp3/mk) -rr3 -mc3*s3*f3**2
+    GAMMA(3,2,3)= gr3*GAMMA(2,2,3) +ppr
+    GAMMA(3,3,2)= gr3*GAMMA(2,2,3) +ppr
+    GAMMA(3,2,4)= gr3*GAMMA(2,2,4) -s3**2*f3
+    GAMMA(3,4,2)= gr3*GAMMA(2,2,4) -s3**2*f3
+    GAMMA(3,3,3)= -mk*gr3/fp
+    GAMMA(3,4,4)= gr3*GAMMA(2,4,4) -s3*c3
+    GAMMA(4,1,2)= f3*mc3/s3*(ppt-GAMMA(2,1,2))
+    GAMMA(4,2,1)= f3*mc3/s3*(ppt-GAMMA(2,1,2))
+    GAMMA(4,1,4)= ppt
+    GAMMA(4,4,1)= ppt
+    GAMMA(4,2,2)= (mc3*(f3*(ppr-frrr-SSr) +fr3)-fp/mk*f3)/s3
+    GAMMA(4,2,3)= f3-mc3*f3/s3*GAMMA(2,2,3)
+    GAMMA(4,3,2)= f3-mc3*f3/s3*GAMMA(2,2,3)
+    GAMMA(4,2,4)= ppr-mc3*f3/s3*GAMMA(2,2,4)
+    GAMMA(4,4,2)= ppr-mc3*f3/s3*GAMMA(2,2,4)
+    GAMMA(4,3,3)= mc3*mk*f3/fp/s3
+    GAMMA(4,3,4)= c3/s3
+    GAMMA(4,4,3)= c3/s3
+    GAMMA(4,4,4)= -mc3*s3*f3*GAMMA(2,3,3)
+
+end subroutine christofells
+!-------------------------------------------
+
+
+
+
+
+
 subroutine fluid_variables(szpac,point,npoint,fluid)
 ! calulates the fluid variables: 
 ! density (rho), expansion (tht), shear (shr), Weyl (wey), 3D Ricci (ric)
@@ -329,9 +633,9 @@ subroutine fluid_variables(szpac,point,npoint,fluid)
     fluid(2) = expansion
     fluid(3) = shear
     fluid(4) = weyl
-    fluid(6) = ricci
-    fluid(7) = areal  * 1d-3   ! changing units from Kpc to Mpc
-    fluid(8) = proper * 1d-3   ! changing units from Kpc to Mpc
+    fluid(5) = ricci
+    fluid(6) = areal  * 1d-3   ! changing units from Kpc to Mpc
+    fluid(7) = proper * 1d-3   ! changing units from Kpc to Mpc
 
 	
 end subroutine fluid_variables
@@ -571,11 +875,16 @@ rpR = rout
 
 end subroutine radial_proper_distance
 !--------------------------------------------------
+
+
+
 subroutine look_back_time(szpac,redshift,time)
 
 ! calculates the lookback time, BUT....
-! the convention here is that its is negative
-! output is in Myr
+! the convention here:
+! it is negative
+! it is in Kpc !
+
 
     implicit none
     integer :: I,Ni
@@ -590,12 +899,6 @@ subroutine look_back_time(szpac,redshift,time)
     omega_lambda =  szpac(2)
     omega_radiation = szpac(7)
     omega_curvature = szpac(9)
-    if(redshift > 10.0) then
-       print *, "--------------------- warning ---------------------------------"
-       print *, "! one should not use the function lookback for high redshifts !"
-       print *, "! one should use a different function, or accept the errors   !"
-       print *, "--------------------- warning ---------------------------------"
-    endif
     Ni = 1024
     dz = redshift/(Ni*1d0)
     zi = 0d0
@@ -620,21 +923,21 @@ subroutine look_back_time(szpac,redshift,time)
       ti = t
       zi = z
     enddo
-    time = -t*szpac(25)
+    time = -t
 end subroutine look_back_time
 !--------------------------------------------------
 subroutine time_evolution(szpac,redshift,time)
 ! time_evolution time is evaluated from the initial redshift
 ! it provide the amount of time needed to evolve the strcuture 
 ! from the initial instant (eg. CMB) to the a given redshift 
-! the output is in Kpc, i.e. length unit: c * time
+! the output is in Kpc!
     implicit none
     double precision,  dimension (100), intent(in) :: szpac  
     double precision, intent(in) :: redshift
     double precision, intent(out) :: time
     double precision :: lookback
     call look_back_time(szpac,redshift,lookback)
-    time = szpac(10) + lookback*szpac(24)
+    time = szpac(10) + lookback
 end subroutine time_evolution
 !--------------------------------------------------
 subroutine age_from_initial(szpac,z_initial,time)
@@ -687,7 +990,7 @@ subroutine age_from_initial(szpac,z_initial,time)
     time = t 
 end subroutine age_from_initial
 !--------------------------------------------------
-subroutine redlcdm(szpac,time,redshift)
+subroutine redshift_lcdm(szpac,time,redshift)
     implicit none
     double precision,  dimension (100), intent(in) :: szpac  
     double precision, intent(in) :: time
@@ -699,7 +1002,7 @@ subroutine redlcdm(szpac,time,redshift)
     rhoi = szpac(23)
     zo = ((rhoz*rhoi)**(1.0d0/3.0d0)) - 1.0d0
     redshift = zo
-end subroutine redlcdm
+end subroutine redshift_lcdm
 !--------------------------------------------------
 subroutine time_lcdm(szpac,redshift,time)
     implicit none

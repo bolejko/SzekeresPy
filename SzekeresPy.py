@@ -1,45 +1,28 @@
-##########################################################################################################
-# SzekeresPy ver. 0.11 - Python package for cosmological calculations using the Szekeres Cosmological Model
+#########################################################################################################
+# SzekeresPy ver. 0.16 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
-# File: SzekeresPy.py 
+# File: SzekeresPy.py
 # 
 # Author: Krzysztof Bolejko
 # 
-# Licence to use: restrictive licence
+# Intended use: research and education
 # 
-# Intended use: educational purposes only
+# Licence to use: BSD-2-Clause ("FreeBSD License")
 # 
 # Copyright (c) 2024 Krzysztof Bolejko
-#
-# The Author grants a licence, free of charge, to any other person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software with restrictions, including limitation of the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, subject to the following conditions:
-#
-# The above copyright notice and this permission notice must be included in all
-# copies or substantial portions of the Software.
-#
-# The intended use of this Software is for educational purposes only,
-# and it is explicitly prohibited to use, copy, modify, merge, publish, 
-# distribute, sublicense, and/or sell copies of the Software for any purposes
-# other than educational purposes. 
 # 
-# Any other use of this Software, or any dealing in this Software other than
-# as described in this notice is prohibited. The use of this Software by entities
-# other than humans is prohibited.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-##########################################################################################################
+# Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+# 
+# 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+# 
+# 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#########################################################################################################
+
 
 import numpy as np
-import szekeres_evolution as fortran_evolution
+import szekeres_fortran as fortran
 
 
 class Szekeres:
@@ -66,35 +49,64 @@ class Szekeres:
     def fluid(self,t,r,theta,phi,redshift):
         point = np.zeros(7)
         point = t,r,theta,phi,redshift,1,1
-        npoint = len(point)
-        ncospar = len(self.cospar)
-        ninhomog = len(self.szpar)
         Ngrid = 1   
-        nv = Ngrid*np.ones(1)
-        aa = np.append(self.cospar,self.szpar)
-        bb = np.append(point,nv)
-        input_data = np.append(aa,bb)
-        rho,tht,shr,wey,ric,arl,prp = fortran_evolution.link_point(input_data)
+        input_data = Ngrid*np.ones(1)
+        input_data = np.append(input_data,self.cospar)
+        input_data = np.append(input_data,self.szpar)
+        input_data = np.append(input_data,point)
+        rho,tht,shr,wey,ric,arl,prp = fortran.link_point(input_data)
         return rho,tht,shr,wey
                        
-    def fluid_1d(self,t, r, theta, phi, redshift):
+    def fluid_1d(self, t, r, theta, phi, redshift,radius_flag = None):
         point = np.zeros(7)
         point = t,r,theta,phi,redshift,1,1
-        npoint = len(point)
-        ncospar = len(self.cospar)
-        ninhomog = len(self.szpar)
-        fluid = np.zeros(10) 
         Ngrid = 100    
-        nv = Ngrid*np.ones(1)
-        aa = np.append(self.cospar,self.szpar)
-        bb = np.append(point,nv)
-        input_data = np.append(aa,bb)
-        rho,tht,shr,wey,ric,arl,prp = fortran_evolution.link_multi(input_data)
-        radius = prp
-        return prp,rho,tht,shr,wey
+        input_data = Ngrid*np.ones(1)
+        input_data = np.append(input_data,self.cospar)
+        input_data = np.append(input_data,self.szpar)
+        input_data = np.append(input_data,point)
+        rho,tht,shr,wey,ric,arl,prp = fortran.link_multi(input_data)
+        if radius_flag == None:
+            radius_flag = 'proper'
+        if radius_flag == 'proper':
+            radius = prp
+        elif radius_flag == 'areal':
+            radius = arl
+        else:
+            radius = prp 
+        return radius,rho,tht,shr,wey
+        
+    def null_geodesic(self,t, r, theta, phi, redshift):
 
+        RA = 2.0
+        DEC = 2.0
+
+        point = np.zeros(7)
+        point = t,r,theta,phi,redshift,1,1
+        direction = np.zeros(7)
+        direction = RA,DEC,1,1,1,1,1
+        
+        Ngrid = 100    
+        input_data = Ngrid*np.ones(1)
+        input_data = np.append(input_data,self.cospar)
+        input_data = np.append(input_data,self.szpar)
+        input_data = np.append(input_data,point)
+        input_data = np.append(input_data,direction)
+
+        light_ray = np.zeros((5,Ngrid))
+        #tempral_position, radial_position, theta_position, phi_position, redshift_position = fortran.link_null(input_data)
+        tempral_position, radial_position, theta_position, phi_position, redshift_position = np.ones(5)
+        light_ray[0,:] = tempral_position
+        light_ray[1,:] = radial_position
+        light_ray[2,:] = theta_position    
+        light_ray[3,:] = phi_position
+        light_ray[4,:] = redshift_position        
+        return light_ray
+               
+
+               
+        
 def initiate(astropy_cosmo=None, inhomog_cosmo=None):
-
   cospar = np.zeros(15)
   szpar = np.zeros(15)
 
@@ -105,10 +117,10 @@ def initiate(astropy_cosmo=None, inhomog_cosmo=None):
   }    
 
   perturbation_dict = {
-      "contrast" : -0.0025,    # contrast at the CMB, not today!
+      "contrast" : -0.0015,    # contrast at the CMB, not today!
       "radius"   :  10.0,
       "slope"    :  0.4,
-      "dipole"   :  0.4
+      "dipole"   :  0.25
   }   
 
 
@@ -126,7 +138,6 @@ def initiate(astropy_cosmo=None, inhomog_cosmo=None):
           cospar[1] = background_dict["Om0"]
           cospar[2] = background_dict["Ode0"]
 
-
   if inhomog_cosmo == None:
       szpar[0] = perturbation_dict["contrast"]
       szpar[1] = perturbation_dict["radius"]
@@ -138,12 +149,8 @@ def initiate(astropy_cosmo=None, inhomog_cosmo=None):
       szpar[2] = perturbation_dict["slope"]
       szpar[3] = perturbation_dict["dipole"]  
 
-
   sz_cosmo = Szekeres(cospar,szpar)
   
-
   return sz_cosmo         
 
 SzekeresModel = initiate()  
-
-

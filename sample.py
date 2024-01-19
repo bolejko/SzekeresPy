@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.16 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.18 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: sample.py
 # 
@@ -57,12 +57,12 @@ plt.show(block=False)
 
 
 #creating a 1d radial plot of the path of the light ray
-#    WORK IN PROGRESS
-#light_ray =  szekeres_cosmo.null_geodesic(t,r,theta,phi,redshift)  
-#plt.figure()
-#plt.plot(light_ray[1,:],light_ray[0,:]) # plot of t(r) 
-#plt.grid()
-#plt.show(block=False)
+print("work in PROGRESS - so not results in Figure 2 yet")
+light_ray =  szekeres_cosmo.null_geodesic(t,r,theta,phi,redshift)  
+plt.figure()
+plt.plot(light_ray[1,:],light_ray[0,:]) # plot of t(r) 
+plt.grid()
+plt.show(block=False)
 
 
 

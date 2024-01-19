@@ -1,5 +1,5 @@
 !########################################################################################################
-! SzekeresPy ver. 0.16 - Python package for cosmological calculations using the Szekeres Cosmological Model
+! SzekeresPy ver. 0.18 - Python package for cosmological calculations using the Szekeres Cosmological Model
 ! 
 ! File: szekeres_fortran.f90
 ! 
@@ -90,7 +90,6 @@ subroutine link_point(input_data,rho,tht,shr,wey,ric,arl,prp)
     integer, parameter :: npoint = 7
     integer, parameter :: ngrid = 100
     integer :: ngrid000
-    double precision :: dr
     double precision, dimension(npypac)  :: pypac 
     double precision, dimension(npyszek) :: pyszek   
     double precision, dimension(npoint)  :: point
@@ -228,30 +227,18 @@ end subroutine link_multi
 !------------------------------------
 subroutine link_null(input_data, temporal, radial, thetal, phial,redshiftal)
     implicit none
-
     double precision, dimension(0:44), intent(in) :: input_data
-    
     integer, parameter :: npypac = 15
     integer, parameter :: npyszek = 15
     integer, parameter :: npoint = 7
-    integer, parameter :: ndirection = 7
-
     integer, parameter :: ngrid = 100
     integer :: ngrid000, ig
-
-
+    double precision :: redshift,ngz
     double precision, dimension(npypac)  :: pypac 
     double precision, dimension(npyszek) :: pyszek   
-    double precision, dimension(npoint)  :: point
-    double precision, dimension(ndirection)  :: direction    
-
-    double precision, dimension (npoint) :: szpoint    
-    double precision :: redshift,time, ngz
+    double precision, dimension(npoint)  :: point,direction
     double precision, dimension (100) :: szpac  
-    
-
     double precision, dimension (0:(ngrid-1)), intent(out) :: temporal, radial, thetal, phial,redshiftal
-
 
     szpac(100) = 2
     temporal = 0.0d0
@@ -266,47 +253,29 @@ subroutine link_null(input_data, temporal, radial, thetal, phial,redshiftal)
     point(1:7)  =  input_data(31:37)
     direction(1:7)  =  input_data(38:44)
     redshift = point(5) 
-    
-    
-
-    call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
-    call time_evolution(szpac,redshift,time)
-    szpoint = point 
-    szpoint(6) = time
-    szpoint(7) = 1.0
-    
-    print *, 'We are about to start light propagation till z =', redshift
-    print *, '.... unable to proceed ...'
-    print *, 'that part of the code is not there yet'
-
-
-
     ngz = redshift/(ngrid*1.0d0 - 1.0d0)
     do ig = 0,ngrid-1
         redshiftal(ig) = ig*ngz
     enddo
-
-    call light_propagation(szpac,ngrid,npoint,szpoint,temporal, radial, thetal, phial,redshiftal)
     
+    call parameter_values(npypac,pypac,npyszek,pyszek,szpac)
+    call light_propagation(szpac,ngrid,npoint,point,direction,temporal,radial,thetal,phial,redshiftal)
     
 end subroutine link_null
 
 !------------------------------------
-subroutine light_propagation(szpac,ngrid,npoint,szpoint,temporal, radial, thetal, phial,redshiftal)
+subroutine light_propagation(szpac,ngrid,npoint,point,direction,temporal,radial,thetal,phial,redshiftal)
     implicit none
     double precision,  dimension (100) :: szpac  
     integer, intent(in) :: ngrid, npoint
-    double precision, dimension (npoint) :: szpoint      
+    double precision, dimension (npoint) :: point, direction    
     double precision, dimension (0:(ngrid-1)), intent(in) :: redshiftal
     double precision, dimension (0:(ngrid-1)), intent(out) :: temporal, radial, thetal, phial
     double precision, dimension(4) :: PV,PVi,PVii,NV,NVi,NVii,AV
     double precision, dimension(7,4) :: PRK,NRK
-    integer :: Ui,I,ig
-    double precision :: RA,DEC
+    integer :: Ui,I
     double precision :: ds,dss
 
-    RA = 0.0d0
-    DEC = 0.0d0
 
     temporal = 0.0
     radial = 0.0 
@@ -319,8 +288,9 @@ subroutine light_propagation(szpac,ngrid,npoint,szpoint,temporal, radial, thetal
 	ds = dss
 
 
-    call initial_conditions(szpac,npoint,szpoint, RA,DEC,PV,NV,AV)
-	PVi=PV
+    call initial_conditions(szpac,npoint,point,direction,PV,NV,AV)
+
+    PVi=PV
 	NVi=NV
 	PVii=PV
 	NVii=NV
@@ -333,53 +303,75 @@ subroutine light_propagation(szpac,ngrid,npoint,szpoint,temporal, radial, thetal
 
 end subroutine light_propagation
 !------------------------------------
-subroutine initial_conditions(szpac,npoint,szpoint, RA,DEC,PV,NV,AV)
+subroutine initial_conditions(szpac,npoint,point,direction,PV,NV,AV)
     implicit none
     double precision,  intent(inout), dimension (100) :: szpac 
     integer, intent(in) :: npoint    
-    double precision, dimension (npoint) :: szpoint      
-    double precision, intent(in) :: RA,DEC
-    double precision, intent(in), dimension(4) :: PV,NV,AV
+    double precision, dimension (npoint) :: point, direction
+    double precision, intent(out), dimension(4) :: PV,NV,AV
+    double precision, dimension (npoint) :: DRV 
+    double precision, dimension(4,4)   :: GIJ
+    double precision, dimension(4,4,4) :: GAM
+    double precision :: r
+
+    PV(1) = point(1)
+    PV(2) = point(2)
+    PV(3) = point(3)
+    PV(4) = point(4)
 
 
 
-	!call getchristofells(zpar,PV,DRV,GAM,GIJ)
+	call christoffels(szpac,PV,DRV,GIJ,GAM)
+	call null_initial(szpac,npoint,point,direction,DRV,GIJ,NV)
 
-    !christofells(szpac,position_vector,metric,GAMMA)
-	!call getnullinitial(RA,DEC,DRV,GIJ,NV)
-
-    !call null_initial(RA,DEC,DRV,GIJ,NV)
-
+    
 
 
 
 
 end subroutine initial_conditions
 !------------------------------------
-subroutine null_initial(RA,DEC,DRV,GIJ,NV)
+subroutine null_initial(szpac,npoint,point,direction,DRV,GIJ,NV)
+    implicit none
+    double precision,  intent(inout), dimension (100) :: szpac 
+    integer, intent(in) :: npoint    
+    double precision, dimension (npoint) :: point, direction 
+    double precision, dimension(npoint), intent(in)   :: DRV
+    double precision, dimension(4,4), intent(in)   :: GIJ
+    double precision, dimension(4), intent(out) :: NV
+    integer :: I,J
+    double precision :: k,kr,qr,pr,s,sr,si,s3,s4,c3,c4,s3i,ri,mkis
+    double precision :: RA,DEC,th,ph,wt,bN,bN4,W,Wi
 
-	!subroutine getnullinitial(RA,DEC,DRV,GIJ,NV)
-	implicit none
-	integer I,J,K
-	double precision THETA,PHI,RA,DEC,pi,DRV(20)
-	double precision GIJ(4,4),PV(4), NV(4),NVN(4),wt
+    RA = direction(1)
+    DEC = direction(2)
+    th = point(3)
+    ph = point(4)
+    k    = szpac(64)
+    kr   = szpac(65) 
+    qr   = szpac(68) 
+    pr   = szpac(71) 
+    s    = szpac(73) 
+    sr   = szpac(74) 
+    si = 1.0/s
+    s3= sin(th)
+    c3= cos(th)
+    s4= sin(ph)
+    c4= cos(ph)
+    s3i = 1.0/s3
+    ri = 1.0d0/DRV(1)
+    mkis = 1.0/sqrt(1.0d0 - k)
+    bN = pr*c4+qr*s4  ! big N
+    bN4 = -pr*s4 + qr*c4 ! derivative of big N with respect to phi
+    W = mkis*(DRV(2)+ DRV(1)*si*(sr*c3+bN*s3) )  !big delta
+    Wi = 1.0d0/W
 
-! NV - null vector in Szekeres coordiantes
-! NVN - null vector in orthonormal frame
-! k^t=NV(1),k^r=NV(2),k^theta=NV(3),k^phi=NV(4)
-
-	NVN(1) = 1.0
-        NVN(2) =  dcos(RA)*dcos(DEC) 
-	NVN(3) = -dsin(DEC) 
-	NVN(4) =  dsin(RA)*dcos(DEC) 
-	
-	NV(1) = NVN(1)
-	NV(2) = NVN(2)*DRV(12)
-	NV(3) = NVN(2)*DRV(13)+NVN(3)/dsqrt(dabs(GIJ(3,3)))
-	NV(4) = NVN(4)/dsqrt(dabs(GIJ(4,4)))
+    NV(1) = 1.0d0
+    NV(2) = dcos(RA)*dcos(DEC)*Wi
+    NV(3) = dcos(RA)*dcos(DEC)*(sr*s3+bN*(1d0-c3)*Wi*si) - ri*dsin(DEC)
+    NV(4) = -NV(1)*bN4*(1d0-c3)+ri*s3i*dsin(RA)*dcos(DEC) 
 
 	NV = -1.0*NV
-
 	wt = 0d0
 	do J=2,4
 		do I=2,4
@@ -390,7 +382,7 @@ subroutine null_initial(RA,DEC,DRV,GIJ,NV)
 	NV(1) = -1.0d0
 
 
-	end
+end subroutine null_initial
     
 
 
@@ -399,14 +391,15 @@ subroutine null_initial(RA,DEC,DRV,GIJ,NV)
 
 
 !------------------------------------
-subroutine christofells(szpac,position_vector,metric,GAMMA)
+subroutine christoffels(szpac,position_vector,derivatives,metric,christoffel)
     implicit none
     integer, parameter :: npoint = 7
     double precision,  intent(inout), dimension (100) :: szpac 
     double precision, dimension(4), intent(in)        :: position_vector
     double precision, dimension(npoint)                  :: point = 0.0d0  
+    double precision, dimension(npoint), intent(out)   :: derivatives 
     double precision, dimension(4,4), intent(out)   :: metric 
-    double precision, dimension(4,4,4), intent(out) :: GAMMA 
+    double precision, dimension(4,4,4), intent(out) :: christoffel 
     double precision :: t,r,th,ph,s3,c3,s4,c4,mc3,mk
     double precision :: PSr,QSr,SSr,PSrr,QSrr,SSrr
     double precision :: p2,ppt,ppr,pprt,pprr
@@ -427,6 +420,14 @@ subroutine christofells(szpac,position_vector,metric,GAMMA)
     rt  = aRt
     rtr = aRtr
     rrr = aRrr
+    derivatives(1) = aR
+    derivatives(2) = aRr
+    derivatives(3) = aRrr
+    derivatives(4) = aRt
+    derivatives(5) = aRtr
+    derivatives(6) = aRtrr
+    derivatives(7) = r
+
     call szekeres_specifics(szpac,r)
     m    = szpac(61) 
     mr   = szpac(62) 
@@ -477,7 +478,7 @@ subroutine christofells(szpac,position_vector,metric,GAMMA)
     frrr= 5d-1*kr/mk 
     frrr=frrr+(pprr-ppr**2+fp4-SSr*f4-gr3*rp3+mc3*f3**2-f5*mk)/fp
     metric=0.0d0
-    GAMMA=0.0d0
+    christoffel=0.0d0
     metric(1,1)= 1.0d0
     metric(2,2)= -p2*grr
     metric(2,3)=  p2*gr3
@@ -486,48 +487,48 @@ subroutine christofells(szpac,position_vector,metric,GAMMA)
     metric(4,2)= metric(2,4)
     metric(3,3)= -p2
     metric(4,4)= metric(3,3)*s3**2
-    GAMMA(1,2,2)= p2*(ppt*f5+(pprt+ppt*f4)*fp/mk)
-    GAMMA(1,2,3)= -ppt*metric(2,3)
-    GAMMA(1,3,2)= -ppt*metric(2,3)
-    GAMMA(1,3,3)= -ppt*metric(3,3)
-    GAMMA(1,2,4)= -ppt*metric(2,4)
-    GAMMA(1,4,2)= -ppt*metric(2,4)
-    GAMMA(1,4,4)= -ppt*metric(4,4)
-    GAMMA(2,1,2)= (pprt+ppt*f4)/fp
-    GAMMA(2,2,1)= (pprt+ppt*f4)/fp
-    GAMMA(2,2,2)=  ppr+ frrr
-    GAMMA(2,2,3)= (gr3*mk+rp3)/fp
-    GAMMA(2,3,2)= (gr3*mk+rp3)/fp
-    GAMMA(2,2,4)= (1.0d0-mc3*mk)*s3*f3/fp
-    GAMMA(2,4,2)= (1.0d0-mc3*mk)*s3*f3/fp
-    GAMMA(2,3,3)= -mk/fp
-    GAMMA(2,4,4)= -mk*s3**2/fp
-    GAMMA(3,1,2)= (pprt-ppr*ppt)*gr3/fp
-    GAMMA(3,2,1)= (pprt-ppr*ppt)*gr3/fp
-    GAMMA(3,1,3)= ppt
-    GAMMA(3,3,1)= ppt
-    GAMMA(3,2,2)= gr3*frrr -fp*(gr3+rp3/mk) -rr3 -mc3*s3*f3**2
-    GAMMA(3,2,3)= gr3*GAMMA(2,2,3) +ppr
-    GAMMA(3,3,2)= gr3*GAMMA(2,2,3) +ppr
-    GAMMA(3,2,4)= gr3*GAMMA(2,2,4) -s3**2*f3
-    GAMMA(3,4,2)= gr3*GAMMA(2,2,4) -s3**2*f3
-    GAMMA(3,3,3)= -mk*gr3/fp
-    GAMMA(3,4,4)= gr3*GAMMA(2,4,4) -s3*c3
-    GAMMA(4,1,2)= f3*mc3/s3*(ppt-GAMMA(2,1,2))
-    GAMMA(4,2,1)= f3*mc3/s3*(ppt-GAMMA(2,1,2))
-    GAMMA(4,1,4)= ppt
-    GAMMA(4,4,1)= ppt
-    GAMMA(4,2,2)= (mc3*(f3*(ppr-frrr-SSr) +fr3)-fp/mk*f3)/s3
-    GAMMA(4,2,3)= f3-mc3*f3/s3*GAMMA(2,2,3)
-    GAMMA(4,3,2)= f3-mc3*f3/s3*GAMMA(2,2,3)
-    GAMMA(4,2,4)= ppr-mc3*f3/s3*GAMMA(2,2,4)
-    GAMMA(4,4,2)= ppr-mc3*f3/s3*GAMMA(2,2,4)
-    GAMMA(4,3,3)= mc3*mk*f3/fp/s3
-    GAMMA(4,3,4)= c3/s3
-    GAMMA(4,4,3)= c3/s3
-    GAMMA(4,4,4)= -mc3*s3*f3*GAMMA(2,3,3)
+    christoffel(1,2,2)= p2*(ppt*f5+(pprt+ppt*f4)*fp/mk)
+    christoffel(1,2,3)= -ppt*metric(2,3)
+    christoffel(1,3,2)= -ppt*metric(2,3)
+    christoffel(1,3,3)= -ppt*metric(3,3)
+    christoffel(1,2,4)= -ppt*metric(2,4)
+    christoffel(1,4,2)= -ppt*metric(2,4)
+    christoffel(1,4,4)= -ppt*metric(4,4)
+    christoffel(2,1,2)= (pprt+ppt*f4)/fp
+    christoffel(2,2,1)= (pprt+ppt*f4)/fp
+    christoffel(2,2,2)=  ppr+ frrr
+    christoffel(2,2,3)= (gr3*mk+rp3)/fp
+    christoffel(2,3,2)= (gr3*mk+rp3)/fp
+    christoffel(2,2,4)= (1.0d0-mc3*mk)*s3*f3/fp
+    christoffel(2,4,2)= (1.0d0-mc3*mk)*s3*f3/fp
+    christoffel(2,3,3)= -mk/fp
+    christoffel(2,4,4)= -mk*s3**2/fp
+    christoffel(3,1,2)= (pprt-ppr*ppt)*gr3/fp
+    christoffel(3,2,1)= (pprt-ppr*ppt)*gr3/fp
+    christoffel(3,1,3)= ppt
+    christoffel(3,3,1)= ppt
+    christoffel(3,2,2)= gr3*frrr -fp*(gr3+rp3/mk) -rr3 -mc3*s3*f3**2
+    christoffel(3,2,3)= gr3*christoffel(2,2,3) +ppr
+    christoffel(3,3,2)= gr3*christoffel(2,2,3) +ppr
+    christoffel(3,2,4)= gr3*christoffel(2,2,4) -s3**2*f3
+    christoffel(3,4,2)= gr3*christoffel(2,2,4) -s3**2*f3
+    christoffel(3,3,3)= -mk*gr3/fp
+    christoffel(3,4,4)= gr3*christoffel(2,4,4) -s3*c3
+    christoffel(4,1,2)= f3*mc3/s3*(ppt-christoffel(2,1,2))
+    christoffel(4,2,1)= f3*mc3/s3*(ppt-christoffel(2,1,2))
+    christoffel(4,1,4)= ppt
+    christoffel(4,4,1)= ppt
+    christoffel(4,2,2)= (mc3*(f3*(ppr-frrr-SSr) +fr3)-fp/mk*f3)/s3
+    christoffel(4,2,3)= f3-mc3*f3/s3*christoffel(2,2,3)
+    christoffel(4,3,2)= f3-mc3*f3/s3*christoffel(2,2,3)
+    christoffel(4,2,4)= ppr-mc3*f3/s3*christoffel(2,2,4)
+    christoffel(4,4,2)= ppr-mc3*f3/s3*christoffel(2,2,4)
+    christoffel(4,3,3)= mc3*mk*f3/fp/s3
+    christoffel(4,3,4)= c3/s3
+    christoffel(4,4,3)= c3/s3
+    christoffel(4,4,4)= -mc3*s3*f3*christoffel(2,3,3)
 
-end subroutine christofells
+end subroutine christoffels
 !-------------------------------------------
 
 

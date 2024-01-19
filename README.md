@@ -12,8 +12,8 @@ SzekeresPy is a Python package for cosmological calculations using the Szekeres 
   * szekeres_fortran.f90 
   * SzekeresPy.py 
 - matplotlib
-- optional: astropy
-- optional: healpy
+- optional: astropy (for comparison and/or importing cosmological parameters) 
+- optional: healpy (for sky maps)
 
 
 ## Installation 

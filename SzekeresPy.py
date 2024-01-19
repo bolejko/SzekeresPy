@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.16 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.18 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: SzekeresPy.py
 # 
@@ -76,24 +76,23 @@ class Szekeres:
             radius = prp 
         return radius,rho,tht,shr,wey
         
-    def null_geodesic(self,t, r, theta, phi, redshift):
-
+    def null_geodesic(self,t, r, theta, phi, redshift,grid_flag = None):
         RA = 2.0
         DEC = 2.0
-
         point = np.zeros(7)
         point = t,r,theta,phi,redshift,1,1
         direction = np.zeros(7)
         direction = RA,DEC,1,1,1,1,1
-        
-        Ngrid = 100    
+        if grid_flag == None:
+            Ngrid = 100
+        else:         
+            Ngrid = 100   
         input_data = Ngrid*np.ones(1)
         input_data = np.append(input_data,self.cospar)
         input_data = np.append(input_data,self.szpar)
         input_data = np.append(input_data,point)
         input_data = np.append(input_data,direction)
-
-        light_ray = np.zeros((5,Ngrid))
+        light_ray = np.zeros((5,Ngrid)) 
         #tempral_position, radial_position, theta_position, phi_position, redshift_position = fortran.link_null(input_data)
         tempral_position, radial_position, theta_position, phi_position, redshift_position = np.ones(5)
         light_ray[0,:] = tempral_position
@@ -105,7 +104,6 @@ class Szekeres:
                
 
                
-        
 def initiate(astropy_cosmo=None, inhomog_cosmo=None):
   cospar = np.zeros(15)
   szpar = np.zeros(15)
@@ -117,7 +115,7 @@ def initiate(astropy_cosmo=None, inhomog_cosmo=None):
   }    
 
   perturbation_dict = {
-      "contrast" : -0.0015,    # contrast at the CMB, not today!
+      "contrast" : -0.0015,    
       "radius"   :  10.0,
       "slope"    :  0.4,
       "dipole"   :  0.25

@@ -139,10 +139,10 @@ def initiate(astropy_cosmo=None, inhomog_cosmo=None):
   }    
 
   perturbation_dict = {
-      "contrast" : -0.015,    
-      "radius"   :  10.0,
+      "contrast" : -0.003,    
+      "radius"   :  15.0,
       "slope"    :  0.4,
-      "dipole"   :  0.3
+      "dipole"   :  0.2
   }   
 
 # FIX needed: assigning values and updating parameters 

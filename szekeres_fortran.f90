@@ -207,7 +207,7 @@ subroutine link_cube(input_data,rho,tht,shr,wey,ric,com,prp)
     integer, parameter :: npyszek = 15
     integer, parameter :: npoint = 7
     integer, parameter :: ngrid = 100
-    integer, parameter :: nbox = 32
+    integer, parameter :: nbox = 8
     integer, parameter :: nsize = nbox*2 +1
     integer, parameter :: npix = nsize*nsize*nsize + nsize*nsize + nsize + 1
     integer :: ngrid000, igx,igy,igz,ib
@@ -290,12 +290,17 @@ subroutine link_cube(input_data,rho,tht,shr,wey,ric,com,prp)
        com(ib,2) = y
        com(ib,3) = z       
 
+       !com(ib,1) = fluid(6)*sin(szpoint(3))*cos(szpoint(4))
+       !com(ib,2) = fluid(6)*sin(szpoint(3))*sin(szpoint(4))
+       !com(ib,3) = fluid(6)*cos(szpoint(3))
+
        prp(ib,1) = fluid(7)*sin(szpoint(3))*cos(szpoint(4))
        prp(ib,2) = fluid(7)*sin(szpoint(3))*sin(szpoint(4))
        prp(ib,3) = fluid(7)*cos(szpoint(3))
 
 
-
+    write(303,*) com(ib,:),rho(ib)
+    write(304,*) prp(ib,:),rho(ib)
 
             enddo
         enddo
@@ -1576,7 +1581,7 @@ subroutine parameter_values(npypac,pypac, npyszek,pyszek, szpac)
     omega_radiation = omega_photon* (1.0d0 + (7.0d0/8.0d0)*Neff*((4.0d0/11.0d0)**(4.0d0/3.0d0)))  
     w_radiation = w_photon* (1.0d0 + (7.0d0/8.0d0)*Neff*((4.0d0/11.0d0)**(4.0d0/3.0d0)))  
     omega_curvature = 1.0d0 - omega_matter - omega_lambda - omega_radiation
-    z_initial = 189.80  
+    z_initial = 1000.0  
     
     omega_baryon = 0.0
     omega_cold = 0.0 

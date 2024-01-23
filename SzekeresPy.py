@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.18 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.19 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: SzekeresPy.py
 # 
@@ -76,9 +76,32 @@ class Szekeres:
             radius = prp 
         return radius,rho,tht,shr,wey
         
+    def fluid_3d(self, t, r, theta, phi, redshift,grid_flag = None):
+        point = np.zeros(7)
+        point = t,r,theta,phi,redshift,1,1
+        Ngrid = 100    
+        input_data = Ngrid*np.ones(1)
+        input_data = np.append(input_data,self.cospar)
+        input_data = np.append(input_data,self.szpar)
+        input_data = np.append(input_data,point)
+        rho,tht,shr,wey,ric,com,prp = fortran.link_cube(input_data)
+        
+        
+        if grid_flag == None:
+            grid_flag = 'comoving'
+        if grid_flag == 'proper':
+            grid = prp
+        elif grid_flag == 'comoving':
+            grid = com
+        else:
+            grid = com
+        return grid,rho,tht,shr,wey
+        
+        
+        
     def null_geodesic(self,t, r, theta, phi, redshift,grid_flag = None):
-        RA = 2.0
-        DEC = 2.0
+        RA = 25.0
+        DEC = -12.0
         point = np.zeros(7)
         point = t,r,theta,phi,redshift,1,1
         direction = np.zeros(7)
@@ -92,14 +115,15 @@ class Szekeres:
         input_data = np.append(input_data,self.szpar)
         input_data = np.append(input_data,point)
         input_data = np.append(input_data,direction)
-        light_ray = np.zeros((5,Ngrid)) 
-        #tempral_position, radial_position, theta_position, phi_position, redshift_position = fortran.link_null(input_data)
-        tempral_position, radial_position, theta_position, phi_position, redshift_position = np.ones(5)
-        light_ray[0,:] = tempral_position
-        light_ray[1,:] = radial_position
-        light_ray[2,:] = theta_position    
-        light_ray[3,:] = phi_position
-        light_ray[4,:] = redshift_position        
+        light_ray = np.zeros((6,Ngrid)) 
+        #tempral_position, radial_position, theta_position, phi_position,  testal , redshift_position = fortran.link_null(input_data)
+        #light_ray[0,:] = tempral_position
+        #light_ray[1,:] = radial_position
+        #light_ray[2,:] = theta_position    
+        #light_ray[3,:] = phi_position
+        #light_ray[4,:] =   testal
+        #light_ray[5,:] = redshift_position      
+        print("Work in progress. No plot yet")
         return light_ray
                
 
@@ -115,12 +139,13 @@ def initiate(astropy_cosmo=None, inhomog_cosmo=None):
   }    
 
   perturbation_dict = {
-      "contrast" : -0.0015,    
+      "contrast" : -0.015,    
       "radius"   :  10.0,
       "slope"    :  0.4,
-      "dipole"   :  0.25
+      "dipole"   :  0.3
   }   
 
+# FIX needed: assigning values and updating parameters 
 
   if astropy_cosmo == None:
       cospar[0] = background_dict["H0"]
@@ -146,6 +171,12 @@ def initiate(astropy_cosmo=None, inhomog_cosmo=None):
       szpar[1] = perturbation_dict["radius"]
       szpar[2] = perturbation_dict["slope"]
       szpar[3] = perturbation_dict["dipole"]  
+
+  print(" ")
+  print("FLRW cosmology",background_dict )
+  print("Szekeres parameters",perturbation_dict )
+  print(" ")
+# FIX needed: optimise for MCMC
 
   sz_cosmo = Szekeres(cospar,szpar)
   

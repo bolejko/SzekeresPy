@@ -1,5 +1,5 @@
 !########################################################################################################
-! SzekeresPy ver. 0.18 - Python package for cosmological calculations using the Szekeres Cosmological Model
+! SzekeresPy ver. 0.19 - Python package for cosmological calculations using the Szekeres Cosmological Model
 ! 
 ! File: szekeres_fortran.f90
 ! 
@@ -27,37 +27,32 @@ implicit none
     integer, parameter :: npoint = 7
     double precision, allocatable :: pypac(:)
     double precision, allocatable :: pyszek(:)    
-    double precision, dimension (npoint) :: szpoint  
+    double precision, dimension (npoint) :: szpoint,szdirection  
     double precision, dimension (100) :: szpac  
     character(len=8), dimension(100) :: szpan
-
     double precision,  dimension (10) :: fluid
     double precision :: redshift,time
     double precision, parameter :: pi = 4.0d0*datan(1.0d0)
+    integer, parameter :: ngrid = 100
+    double precision, dimension (0:(ngrid-1)) :: temporal, radial, thetal, phial,testal,redshiftal
+    logical :: print_names = .True.
 
-    
-    npypac = 15
-    allocate(pypac(npypac))
-    npyszek = 15
-    allocate(pyszek(npyszek))
-
-
-
-! overide of model parameters [if you wish to use the code as a standalone fortran program with no dependency on python fornt-end]
+   npypac = 15
+   allocate(pypac(npypac))
+   npyszek = 15
+   allocate(pyszek(npyszek))
    szpac = 0.0d0
 
-
    call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
-
-   call parameter_names(szpan)
+   call parameter_names(print_names,szpac,szpan)
 
    szpoint(1) = 0.0 
-   szpoint(2) = 1.0
+   szpoint(2) = 30.0
    szpoint(3) = 0.05*pi
    szpoint(4) = pi 
    
+   redshift = 0.5d0
    
-   redshift = 0.0d0
    call time_evolution(szpac,redshift,time)
    szpoint(5) = redshift 
    szpoint(6) = time
@@ -65,15 +60,27 @@ implicit none
    print *, "time_evolution for redshift=",redshift,'is', time*szpac(25)
 
 
-   open(101,file="fld")
+   ! testing the evolution of the fluid
+   open(101,file="szekeres_fluid_output.txt")
+   write(101,*) "# areal,proper,density,expansion,shear,weyl,ricci-3d" 
    do I=1,100
      szpoint(2) = 0.5*I
-     call fluid_variables(szpac,szpoint, npoint, fluid)
-     write(101,*) szpoint(2),fluid
+     call fluid_variables(szpac,npoint,szpoint,fluid)
+     write(101,*) fluid(6:7),fluid(1:5)
    enddo
 
-
-
+    ! testing null geodesics 
+    szdirection = 0.0
+    szdirection(1) = 0.1
+    szdirection(2) = 0.1
+    szpoint(1) = 0.0 
+    szpoint(2) = 30.0
+    szpoint(3) = 0.05*pi
+    szpoint(4) = pi 
+    szpoint(5) = 0.2
+    call null_geodesic(szpac,ngrid,npoint,szpoint,szdirection,temporal,radial,thetal,phial,testal,redshiftal)
+    
+    
 
 end program szekeres_fortran
 
@@ -81,10 +88,7 @@ end program szekeres_fortran
 
 subroutine link_point(input_data,rho,tht,shr,wey,ric,arl,prp)
     implicit none
-
-
     double precision, dimension(0:37), intent(in) :: input_data
-    
     integer, parameter :: npypac = 15
     integer, parameter :: npyszek = 15
     integer, parameter :: npoint = 7
@@ -93,14 +97,10 @@ subroutine link_point(input_data,rho,tht,shr,wey,ric,arl,prp)
     double precision, dimension(npypac)  :: pypac 
     double precision, dimension(npyszek) :: pyszek   
     double precision, dimension(npoint)  :: point
-    double precision, dimension (npoint) :: szpoint    
     double precision :: redshift,time
     double precision, dimension (100) :: szpac  
     double precision,  dimension (10) :: fluid
     double precision, intent(out) :: rho,tht,shr,wey,ric,arl,prp
-
-    szpac(100) = 2
-
 
     rho = 0.0d0
     tht = 0.0d0
@@ -110,23 +110,18 @@ subroutine link_point(input_data,rho,tht,shr,wey,ric,arl,prp)
     ric = 0.0d0
     arl = 0.0d0
     prp = 0.0d0
-
     ngrid000 = int(input_data(0))
     pypac(1:15)  =  input_data(1:15)
     pyszek(1:15) =  input_data(16:30)
     point(1:7)  =  input_data(31:37)
     redshift = point(5) 
-    call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
+    szpac(100) = 2
+    call parameter_values(npypac,pypac,npyszek,pyszek,szpac)
+    call age_from_initial(szpac)
     call time_evolution(szpac,redshift,time)
-    szpoint(1) = point(1)
-    szpoint(2) = point(2)
-    szpoint(3) = point(3)
-    szpoint(4) = point(4)
-    szpoint(5) = redshift
-    szpoint(6) = time
-    szpoint(7) = 1.0  
+    point(6) = time
     szpac(100) = 5.0
-    call fluid_variables(szpac,szpoint, npoint, fluid)
+    call fluid_variables(szpac,npoint,point,fluid)
     rho = fluid(1)
     tht = fluid(2)
     shr = fluid(3)
@@ -134,42 +129,26 @@ subroutine link_point(input_data,rho,tht,shr,wey,ric,arl,prp)
     ric = fluid(5)
     arl = fluid(6)
     prp = fluid(7)
- 
-    
     
 end subroutine link_point
-
-
 !------------------------------------
 subroutine link_multi(input_data,rho,tht,shr,wey,ric,arl,prp)
     implicit none
-
-
     double precision, dimension(0:37), intent(in) :: input_data
-    
     integer, parameter :: npypac = 15
     integer, parameter :: npyszek = 15
     integer, parameter :: npoint = 7
-
     integer, parameter :: ngrid = 100
-
     integer :: ngrid000, ig
     double precision :: dr
-
-
     double precision, dimension(npypac)  :: pypac 
     double precision, dimension(npyszek) :: pyszek   
     double precision, dimension(npoint)  :: point
-
     double precision, dimension (npoint) :: szpoint    
-    double precision :: redshift,time
+    double precision :: redshift,time,age
     double precision, dimension (100) :: szpac  
     double precision,  dimension (10) :: fluid
-
     double precision, dimension (0:(ngrid-1)), intent(out) :: rho,tht,shr,wey,ric,arl,prp
-
-
-    szpac(100) = 2
 
     rho = 0.0d0
     tht = 0.0d0
@@ -179,27 +158,21 @@ subroutine link_multi(input_data,rho,tht,shr,wey,ric,arl,prp)
     ric = 0.0d0
     arl = 0.0d0
     prp = 0.0d0
-
     ngrid000 = int(input_data(0))
     pypac(1:15)  =  input_data(1:15)
     pyszek(1:15) =  input_data(16:30)
     point(1:7)  =  input_data(31:37)
-
-
     dr = point(2)/(1.0d0*ngrid)   
     redshift = point(5) 
+    szpac(100) = 2
     call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
+    call age_from_initial(szpac)
     call time_evolution(szpac,redshift,time)
-    szpoint = point 
-    szpoint(6) = time
-    szpoint(7) = 1.0
+    age = szpac(10)
     
-
-
 !$OMP PARALLEL DO DEFAULT(NONE) &
 !$OMP PRIVATE(ig,szpac,szpoint,fluid) &
-!$OMP SHARED(pypac,pyszek,point,dr,redshift,time,input_data,rho,tht,shr,wey,ric,arl,prp)
-    
+!$OMP SHARED(pypac,pyszek,point,dr,redshift,time,age,rho,tht,shr,wey,ric,arl,prp)
     do ig=0,ngrid-1
         szpoint(1) = point(1)
         szpoint(2) = (ig+1)*dr
@@ -207,10 +180,11 @@ subroutine link_multi(input_data,rho,tht,shr,wey,ric,arl,prp)
         szpoint(4) = point(4)
         szpoint(5) = redshift
         szpoint(6) = time
-        szpoint(7) = 1.0  
+        szpoint(7) = 1.0
+        szpac(10)  = age  
         szpac(100) = 5.0
         call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
-        call fluid_variables(szpac,szpoint, npoint, fluid)
+        call fluid_variables(szpac,npoint,szpoint,fluid)
         rho(ig) = fluid(1)
         tht(ig) = fluid(2)
         shr(ig) = fluid(3)
@@ -225,210 +199,422 @@ subroutine link_multi(input_data,rho,tht,shr,wey,ric,arl,prp)
 end subroutine link_multi
 
 !------------------------------------
-subroutine link_null(input_data, temporal, radial, thetal, phial,redshiftal)
+!------------------------------------
+subroutine link_cube(input_data,rho,tht,shr,wey,ric,com,prp)
+    implicit none
+    double precision, dimension(0:37), intent(in) :: input_data
+    integer, parameter :: npypac = 15
+    integer, parameter :: npyszek = 15
+    integer, parameter :: npoint = 7
+    integer, parameter :: ngrid = 100
+    integer, parameter :: nbox = 32
+    integer, parameter :: nsize = nbox*2 +1
+    integer, parameter :: npix = nsize*nsize*nsize + nsize*nsize + nsize + 1
+    integer :: ngrid000, igx,igy,igz,ib
+    double precision :: dr,x,y,z,r
+    integer :: xshift,yshift,zshift
+    double precision, dimension(npypac)  :: pypac 
+    double precision, dimension(npyszek) :: pyszek   
+    double precision, dimension(npoint)  :: point
+    double precision, dimension (npoint) :: szpoint    
+    double precision :: redshift,time,age
+    double precision, dimension (100) :: szpac  
+    double precision,  dimension (10) :: fluid
+    double precision, dimension (npix), intent(out) :: rho,tht,shr,wey,ric
+    double precision, dimension (npix,3), intent(out) :: com,prp
+
+
+
+    rho = 0.0d0
+    tht = 0.0d0
+    shr = 0.0d0
+    wey = 0.0d0
+    ric = 0.0d0
+    ric = 0.0d0
+    com = 0.0d0
+    prp = 0.0d0
+    ngrid000 = int(input_data(0))
+    pypac(1:15)  =  input_data(1:15)
+    pyszek(1:15) =  input_data(16:30)
+    point(1:7)  =  input_data(31:37)
+    dr = point(2)/(1.0d0*nbox)   
+    redshift = point(5) 
+    szpac(100) = 2
+    call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
+    call age_from_initial(szpac)
+    call time_evolution(szpac,redshift,time)
+    age = szpac(10)
+    
+!$OMP PARALLEL DO DEFAULT(NONE) &
+!$OMP PRIVATE(igx,igy,igz,ib,x,y,z,xshift,yshift,zshift,r,szpac,szpoint,fluid) &
+!$OMP SHARED(pypac,pyszek,point,dr,redshift,time,age,rho,tht,shr,wey,ric,com,prp)
+    do igx=-nbox,nbox
+        do igy=-nbox,nbox
+            do igz=-nbox,nbox
+    
+        x=dr*igx
+        y=dr*igy
+        z=dr*igz
+        r = sqrt(x*x + y*y + z*z)
+        if(r < 0.01) r = 0.01
+
+
+    
+        szpoint(1) = point(1)
+        szpoint(2) = r
+        szpoint(3) = acos(z/r)
+        szpoint(4) = atan2(y,x) 
+        szpoint(5) = redshift
+        szpoint(6) = time
+        szpoint(7) = 1.0
+        szpac(10)  = age  
+        szpac(100) = 5.0
+        call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
+        call fluid_variables(szpac,npoint,szpoint,fluid)
+
+        xshift = int((x + (nbox+1)*dr)/(dr*nbox))
+        yshift = int((y + (nbox+1)*dr)/(dr*nbox))
+        zshift = int((z + (nbox+1)*dr)/(dr*nbox))              
+        
+
+  
+
+       ib = int(  xshift*nsize*nsize + yshift*nsize*nsize + zshift  + 1)
+       rho(ib) = fluid(1)
+       tht(ib) = fluid(2)
+       shr(ib) = fluid(3)
+       wey(ib) = fluid(4)
+       ric(ib) = fluid(5)       
+       
+       com(ib,1) = x
+       com(ib,2) = y
+       com(ib,3) = z       
+
+       prp(ib,1) = fluid(7)*sin(szpoint(3))*cos(szpoint(4))
+       prp(ib,2) = fluid(7)*sin(szpoint(3))*sin(szpoint(4))
+       prp(ib,3) = fluid(7)*cos(szpoint(3))
+
+
+
+
+            enddo
+        enddo
+    enddo   
+!$OMP END PARALLEL DO   
+    
+
+    
+end subroutine link_cube
+
+!------------------------------------
+subroutine link_null(input_data, temporal, radial, thetal, phial,testal,redshiftal)
     implicit none
     double precision, dimension(0:44), intent(in) :: input_data
     integer, parameter :: npypac = 15
     integer, parameter :: npyszek = 15
     integer, parameter :: npoint = 7
     integer, parameter :: ngrid = 100
-    integer :: ngrid000, ig
-    double precision :: redshift,ngz
+    integer :: ngrid000
     double precision, dimension(npypac)  :: pypac 
     double precision, dimension(npyszek) :: pyszek   
     double precision, dimension(npoint)  :: point,direction
     double precision, dimension (100) :: szpac  
-    double precision, dimension (0:(ngrid-1)), intent(out) :: temporal, radial, thetal, phial,redshiftal
+    double precision, dimension (0:(ngrid-1)), intent(out) :: temporal, radial, thetal, phial,testal,redshiftal
 
     szpac(100) = 2
-    temporal = 0.0d0
-    radial = 0.0d0
-    thetal = 0.0d0
-    phial = 0.0d0
-   
-    ngrid000 = int(input_data(0))
 
+    ngrid000 = int(input_data(0))
     pypac(1:15)  =  input_data(1:15)
     pyszek(1:15) =  input_data(16:30)
     point(1:7)  =  input_data(31:37)
     direction(1:7)  =  input_data(38:44)
-    redshift = point(5) 
-    ngz = redshift/(ngrid*1.0d0 - 1.0d0)
-    do ig = 0,ngrid-1
-        redshiftal(ig) = ig*ngz
-    enddo
-    
+
     call parameter_values(npypac,pypac,npyszek,pyszek,szpac)
-    call light_propagation(szpac,ngrid,npoint,point,direction,temporal,radial,thetal,phial,redshiftal)
+    call age_from_initial(szpac)
+    call null_geodesic(szpac,ngrid,npoint,point,direction,temporal,radial,thetal,phial,testal,redshiftal)
     
 end subroutine link_null
 
 !------------------------------------
-subroutine light_propagation(szpac,ngrid,npoint,point,direction,temporal,radial,thetal,phial,redshiftal)
+subroutine null_geodesic(szpac,ngrid,npoint,point,direction,temporal,radial,thetal,phial,testal,redshiftal)
     implicit none
     double precision,  dimension (100) :: szpac  
     integer, intent(in) :: ngrid, npoint
     double precision, dimension (npoint) :: point, direction    
-    double precision, dimension (0:(ngrid-1)), intent(in) :: redshiftal
-    double precision, dimension (0:(ngrid-1)), intent(out) :: temporal, radial, thetal, phial
-    double precision, dimension(4) :: PV,PVi,PVii,NV,NVi,NVii,AV
-    double precision, dimension(7,4) :: PRK,NRK
-    integer :: Ui,I
-    double precision :: ds,dss
+    double precision, dimension (0:(ngrid-1)), intent(out) :: temporal, radial, thetal, phial, testal, redshiftal
+    double precision, dimension(0:3)   :: PV,PVi,PVii,NV,NVi,NVii,AV
+    double precision, dimension(4,0:3) :: PRK,NRK
+    integer :: Ui,I,J,iz
+    double precision,dimension(0:3) :: yp,yp1,yp2,yp3
+    double precision :: xp,xp1,xp2,xp3
+    double precision :: ds,dss,z
+    double precision :: redshift,ngz,null_test,f16
 
+    redshift = point(5) 
+    ngz = redshift/(ngrid*1.0d0 - 1.0d0)
+    do iz = 0,ngrid-1
+        redshiftal(iz) = iz*ngz
+    enddo
 
-    temporal = 0.0
-    radial = 0.0 
-    thetal = 0.0
-    phial = 0.0
-      
+    f16 = 1.0d0/6.0d0
+    iz = 0
+    Ui = 100000
+    dss = 0.0051d0
+    ds = dss
 
-    Ui = 2500000
-	dss = 0.0001d0
-	ds = dss
-
-
-    call initial_conditions(szpac,npoint,point,direction,PV,NV,AV)
+    call initial_conditions(szpac,npoint,point,direction,PV,NV)
 
     PVi=PV
-	NVi=NV
-	PVii=PV
-	NVii=NV
-	PRK = 0.0d0
-	NRK = 0.0d0
+    NVi=NV
+    PVii=PV
+    NVii=NV
+    PRK = 0.0d0
+    NRK = 0.0d0
+
+    do I=1,Ui
+
+        call light_propagation(szpac,PV,NV,AV,null_test)
+        do J=0,3
+        PRK(1,J) = NV(J)*ds
+        NRK(1,J) = AV(J)*ds
+        PV(J) = PVi(J) + 0.5*PRK(1,J)
+        NV(J) = NVi(J) + 0.5*NRK(1,J)
+        enddo
+
+        call light_propagation(szpac,PV,NV,AV,null_test)
+        do J=0,3
+        PRK(2,J) = NV(J)*ds
+        NRK(2,J) = AV(J)*ds
+        PV(J) = PVi(J) + 0.5*PRK(2,J)
+        NV(J) = NVi(J) + 0.5*NRK(2,J)
+        enddo
+
+        call light_propagation(szpac,PV,NV,AV,null_test)
+        do J=0,3
+        PRK(3,J) = NV(J)*ds
+        NRK(3,J) = AV(J)*ds
+        PV(J) = PVi(J) + PRK(3,J)
+        NV(J) = NVi(J) + NRK(3,J)
+        enddo
+
+        call light_propagation(szpac,PV,NV,AV,null_test)
+        do J=0,3
+        PRK(4,J) = NV(J)*ds
+        NRK(4,J) = AV(J)*ds
+        PV(J) = PVi(J) + f16*(PRK(1,J) + 2.0d0*(PRK(2,J) + PRK(3,J)) + PRK(4,J))
+        NV(J) = NVi(J) + f16*(NRK(1,J) + 2.0d0*(NRK(2,J) + NRK(3,J)) + PRK(4,J))
+        enddo
 
 
 
+! FIX needed: adjust the step to the grid
+    call light_propagation(szpac,PV,NV,AV,null_test)
+    z = abs(NV(0)) - 1.0
+        if (z > redshiftal(iz) .and. I>1) then
+            yp1 = PVii
+            yp2 = PVi
+            yp3 = PV
+            yp = 0.0d0
+            xp1 = dabs(NVii(0)) - 1.0d0
+            xp2 = dabs(NVi(0)) - 1.0d0
+            xp3 = dabs(NV(0)) - 1.0d0
+            xp = redshiftal(iz)
+            yp = yp + yp1*((xp - xp2)/(xp1-xp2))*((xp - xp3)/(xp1-xp3))
+            yp = yp + yp2*((xp - xp1)/(xp2-xp1))*((xp - xp3)/(xp2-xp3))
+            yp = yp + yp3*((xp - xp1)/(xp3-xp1))*((xp - xp2)/(xp3-xp2))
+            temporal(iz) = yp(0)
+            radial(iz)   = yp(1)
+            phial(iz)    = yp(2)
+            thetal(iz)   = yp(3)
+            testal(iz) = null_test
+            iz=iz+1
+            if(iz == ngrid) exit
+     
+     
+        write(300,*) I,iz,z,PV
 
+        endif
 
-end subroutine light_propagation
+        PVii = PVi
+        PVi  = PV
+        NVii = NVi
+        NVi  = NV
+
+    enddo
+
+end subroutine null_geodesic
 !------------------------------------
-subroutine initial_conditions(szpac,npoint,point,direction,PV,NV,AV)
+subroutine light_propagation(szpac,PV,NV,AV,null_test)
     implicit none
     double precision,  intent(inout), dimension (100) :: szpac 
-    integer, intent(in) :: npoint    
-    double precision, dimension (npoint) :: point, direction
-    double precision, intent(out), dimension(4) :: PV,NV,AV
-    double precision, dimension (npoint) :: DRV 
-    double precision, dimension(4,4)   :: GIJ
-    double precision, dimension(4,4,4) :: GAM
-    double precision :: r
-
-    PV(1) = point(1)
-    PV(2) = point(2)
-    PV(3) = point(3)
-    PV(4) = point(4)
+    double precision, dimension(0:3), intent(in) :: PV,NV
+    double precision, dimension(0:3), intent(out) :: AV 
+    double precision, dimension(0:3,0:3)   :: GIJ
+    double precision, dimension(0:3,0:3,0:3) :: GAM,GAM2
+    integer :: G,I,J
+    double precision :: null_test
 
 
 
-	call christoffels(szpac,PV,DRV,GIJ,GAM)
-	call null_initial(szpac,npoint,point,direction,DRV,GIJ,NV)
+    !call christoffels2(szpac,PV,GIJ,GAM)
+    
+    
+    call christoffels2(szpac,PV,GIJ,GAM2)
+
 
     
 
 
+    AV = 0d0
+    do G=0,3
+        do I=0,3
+            do J=0,3
+                AV(G) = AV(G) - GAM(G,I,J)*NV(I)*NV(J)
+print *, G,I,J, GAM(G,I,J),GAM2(G,I,J)
+            enddo
+        enddo
+    enddo
+
+    null_test = 0.0
+    do I=0,3
+        do J=0,3
+            null_test = null_test + GIJ(I,J)*NV(I)*NV(J)
+        enddo
+    enddo   
+stop
 
 
-end subroutine initial_conditions
+end subroutine light_propagation
 !------------------------------------
-subroutine null_initial(szpac,npoint,point,direction,DRV,GIJ,NV)
+subroutine initial_conditions(szpac,npoint,point,direction,PV,NV)
     implicit none
     double precision,  intent(inout), dimension (100) :: szpac 
     integer, intent(in) :: npoint    
-    double precision, dimension (npoint) :: point, direction 
-    double precision, dimension(npoint), intent(in)   :: DRV
-    double precision, dimension(4,4), intent(in)   :: GIJ
-    double precision, dimension(4), intent(out) :: NV
-    integer :: I,J
-    double precision :: k,kr,qr,pr,s,sr,si,s3,s4,c3,c4,s3i,ri,mkis
-    double precision :: RA,DEC,th,ph,wt,bN,bN4,W,Wi
+    double precision, dimension (npoint) :: point, direction
+    double precision, intent(out), dimension(0:3) :: PV,NV
+    double precision, dimension(0:3,0:3)   :: GIJ
+    double precision, dimension(0:3,0:3,0:3) :: GAM
 
-    RA = direction(1)
-    DEC = direction(2)
+    PV(0) = 0.0d0
+    PV(1) = point(2)
+    PV(2) = point(3)
+    PV(3) = point(4)
+
+    call christoffels2(szpac,PV,GIJ,GAM)
+    call null_initial(szpac,npoint,point,direction,NV)
+
+end subroutine initial_conditions
+!------------------------------------
+subroutine null_initial(szpac,npoint,point,direction,NV)
+    implicit none
+    double precision,  intent(in), dimension (100) :: szpac 
+    integer, intent(in) :: npoint    
+    double precision, dimension (npoint), intent(in) :: point, direction 
+    double precision, dimension(0:3,0:3) :: E
+    double precision, dimension(0:3) :: LV
+    double precision, dimension(0:3), intent(out) :: NV
+    integer :: I,J
+    double precision :: RA,DEC,th,ph
+    double precision :: aR,aRi,aRr
+    double precision :: sth,cth,sph,cph,sthi,n,nd,mcth
+    double precision :: mk,mki,mkis,sna,snc
+    double precision :: k,qr,pr,s,sr,si,W,Wi
+
+    RA = direction(1)*szpac(33)
+    DEC = direction(2)*szpac(33)
     th = point(3)
     ph = point(4)
+    aRi   = szpac(80)
+    aR    = szpac(81)
+    aRr   = szpac(82)
     k    = szpac(64)
-    kr   = szpac(65) 
     qr   = szpac(68) 
     pr   = szpac(71) 
     s    = szpac(73) 
     sr   = szpac(74) 
     si = 1.0/s
-    s3= sin(th)
-    c3= cos(th)
-    s4= sin(ph)
-    c4= cos(ph)
-    s3i = 1.0/s3
-    ri = 1.0d0/DRV(1)
-    mkis = 1.0/sqrt(1.0d0 - k)
-    bN = pr*c4+qr*s4  ! big N
-    bN4 = -pr*s4 + qr*c4 ! derivative of big N with respect to phi
-    W = mkis*(DRV(2)+ DRV(1)*si*(sr*c3+bN*s3) )  !big delta
+    mk = 1.0 - k
+    mki = 1.0/mk
+    mkis = sqrt(mki)
+    sth = sin(th)
+    cth = cos(th)
+    sph = sin(ph)
+    cph = cos(ph)
+    sthi = 1.0d0/sth
+    mcth = 1.0d0 - cth
+    n   =  pr*cph + qr*sph
+    nd  = -pr*sph + qr*cph
+
+    sna = n*si*sth+sr*si*cth 
+    snc = n*si*mcth+sr*si*sth
+    W = mkis*(aRr+aR*sna)
     Wi = 1.0d0/W
 
-    NV(1) = 1.0d0
-    NV(2) = dcos(RA)*dcos(DEC)*Wi
-    NV(3) = dcos(RA)*dcos(DEC)*(sr*s3+bN*(1d0-c3)*Wi*si) - ri*dsin(DEC)
-    NV(4) = -NV(1)*bN4*(1d0-c3)+ri*s3i*dsin(RA)*dcos(DEC) 
+! Null vector in the Lorentz's frame:
+    LV(0) = -1.0d0
+    LV(1) = sin(DEC)
+    LV(2) = cos(DEC)*cos(RA)
+    LV(3) = cos(DEC)*sin(RA)
 
-	NV = -1.0*NV
-	wt = 0d0
-	do J=2,4
-		do I=2,4
-		wt = wt + (GIJ(I,J)*NV(I)*NV(J))
-		enddo
-	enddo
-	NV = NV/dsqrt(dabs(wt))
-	NV(1) = -1.0d0
+! vierbein:  e_A^alpha = E(A,alpha)
+    E(0,0) = 1.0
+    E(0,1) = 0.0
+    E(0,2) = 0.0
+    E(0,3) = 0.0    
+    E(1,0) = 0.0
+    E(1,1) = Wi
+    E(1,2) = (sr*sth*si+n*mcth*si)*Wi
+    E(1,3) = - nd*mcth*si*Wi*sthi
+    E(2,0) = 0.0
+    E(2,1) = 0.0
+    E(2,2) = aRi
+    E(2,3) = 0.0  
+    E(3,0) = 0.0
+    E(3,1) = 0.0
+    E(3,2) = 0.0
+    E(3,3) = aRi*sthi
 
+! null vector in the Szekeres coordinates
+    do I=0,3
+        NV(I) = 0.0
+        do J=0,3
+            NV(I) = NV(I) + LV(J)*E(J,I)
+        enddo
+    enddo
 
 end subroutine null_initial
     
 
 
-
-
-
-
 !------------------------------------
-subroutine christoffels(szpac,position_vector,derivatives,metric,christoffel)
+subroutine christoffels2(szpac,PV,GIJ,GAM)
     implicit none
-    integer, parameter :: npoint = 7
-    double precision,  intent(inout), dimension (100) :: szpac 
-    double precision, dimension(4), intent(in)        :: position_vector
-    double precision, dimension(npoint)                  :: point = 0.0d0  
-    double precision, dimension(npoint), intent(out)   :: derivatives 
-    double precision, dimension(4,4), intent(out)   :: metric 
-    double precision, dimension(4,4,4), intent(out) :: christoffel 
-    double precision :: t,r,th,ph,s3,c3,s4,c4,mc3,mk
-    double precision :: PSr,QSr,SSr,PSrr,QSrr,SSrr
-    double precision :: p2,ppt,ppr,pprt,pprr
-    double precision :: fp,f1,fp1,f3,fr3,f4,fp4,f5
-    double precision :: grr,gr3,gr4,rr3,rp3,frrr
-    double precision :: aR,aRt, aRr, aRrr, aRtr, aRtrr
-    double precision :: ro0,rr,rt,rtr,rrr
+
+    double precision,  intent(inout), dimension (100)     :: szpac 
+    double precision, dimension(0:3), intent(in)          :: PV
+    double precision, dimension(0:3,0:3), intent(out)     :: GIJ
+    double precision, dimension(0:3,0:3,0:3), intent(out) :: GAM
+    double precision, dimension(0:3,0:3,0:3) :: GDER
+    double precision, dimension(0:3,0:3) :: GINV
+    double precision :: th,ph
+    double precision :: aR,aRt, aRr, aRrr, aRtr,aRtrr,aRi,aR2,rs1,rs2
+    double precision :: sth,cth,sph,cph,sthi,sth2,n,nd,nr,ndr,mcth,mcth2
+    double precision :: si,si2,si3,mk,mki,mki2,mksi,mns2,mnss,mns,nsc,nd2
     double precision :: m,mr,mrr,k,kr,krr,q,qr,qrr,p,pr,prr,s,sr,srr
+    double precision :: GW,GWi, g11_part_1, g11_part_2
+    integer :: I,J,G,H
 
-    t  = position_vector(1)
-    r  = position_vector(2)
-    th = position_vector(3)
-    ph = position_vector(4)
-    point(1:4) = position_vector(1:4)
-    call areal_radius(szpac,point,npoint,aR,aRt, aRr, aRrr, aRtr, aRtrr)
-    ro0 = aR
-    rr  = aRr
-    rt  = aRt
-    rtr = aRtr
-    rrr = aRrr
-    derivatives(1) = aR
-    derivatives(2) = aRr
-    derivatives(3) = aRrr
-    derivatives(4) = aRt
-    derivatives(5) = aRtr
-    derivatives(6) = aRtrr
-    derivatives(7) = r
+    call areal_evolution(szpac,PV)
 
-    call szekeres_specifics(szpac,r)
+    aRi   = szpac(80)
+    aR    = szpac(81)
+    aRr   = szpac(82)
+    aRrr  = szpac(83)
+    aRt   = szpac(84)
+    aRtr  = szpac(85)
+    aRtrr = szpac(86)
+    aR2 = aR*aR
+
     m    = szpac(61) 
     mr   = szpac(62) 
     mrr  = szpac(63) 
@@ -443,100 +629,156 @@ subroutine christoffels(szpac,position_vector,derivatives,metric,christoffel)
     prr  = szpac(72) 
     s    = szpac(73) 
     sr   = szpac(74) 
-    srr  = szpac(75) 
-    s3= sin(th)
-    c3= cos(th)
-    s4= sin(ph)
-    c4= cos(ph)
-    mc3= 1.0d0-c3
-    mk= 1.0d0-k
-    kr= kr
-    PSr= pr/s
-    QSr= qr/s
-    SSr= sr/s
-    PSrr= prr/s
-    QSrr= qrr/s
-    SSrr= srr/s
-    p2= ro0*ro0
-    ppt= rt/ro0
-    ppr= rr/ro0
-    pprt= rtr/ro0
-    pprr= rrr/ro0
-    f1= PSr*c4+QSr*s4
-    fp1= PSrr*c4+QSrr*s4
-    f3= QSr*c4-PSr*s4
-    fr3= QSrr*c4-PSrr*s4-f3*SSr
-    f4= f1*s3+SSr*c3
-    fp4= fp1*s3+SSrr*c3
-    f5= SSr**2*s3**2+2.0d0*SSr*f1*s3*mc3+mc3**2*(PSr**2+QSr**2)
-    fp= ppr+f4
-    grr= f5+fp**2/mk
-    gr3= f1*mc3+SSr*s3
-    gr4= mc3*s3*f3
-    rr3= (fp1-f1*SSr)*mc3 + (SSrr-SSr**2)*s3
-    rp3= f1*c3-SSr*s3
-    frrr= 5d-1*kr/mk 
-    frrr=frrr+(pprr-ppr**2+fp4-SSr*f4-gr3*rp3+mc3*f3**2-f5*mk)/fp
-    metric=0.0d0
-    christoffel=0.0d0
-    metric(1,1)= 1.0d0
-    metric(2,2)= -p2*grr
-    metric(2,3)=  p2*gr3
-    metric(3,2)= metric(2,3)
-    metric(2,4)= -p2*gr4
-    metric(4,2)= metric(2,4)
-    metric(3,3)= -p2
-    metric(4,4)= metric(3,3)*s3**2
-    christoffel(1,2,2)= p2*(ppt*f5+(pprt+ppt*f4)*fp/mk)
-    christoffel(1,2,3)= -ppt*metric(2,3)
-    christoffel(1,3,2)= -ppt*metric(2,3)
-    christoffel(1,3,3)= -ppt*metric(3,3)
-    christoffel(1,2,4)= -ppt*metric(2,4)
-    christoffel(1,4,2)= -ppt*metric(2,4)
-    christoffel(1,4,4)= -ppt*metric(4,4)
-    christoffel(2,1,2)= (pprt+ppt*f4)/fp
-    christoffel(2,2,1)= (pprt+ppt*f4)/fp
-    christoffel(2,2,2)=  ppr+ frrr
-    christoffel(2,2,3)= (gr3*mk+rp3)/fp
-    christoffel(2,3,2)= (gr3*mk+rp3)/fp
-    christoffel(2,2,4)= (1.0d0-mc3*mk)*s3*f3/fp
-    christoffel(2,4,2)= (1.0d0-mc3*mk)*s3*f3/fp
-    christoffel(2,3,3)= -mk/fp
-    christoffel(2,4,4)= -mk*s3**2/fp
-    christoffel(3,1,2)= (pprt-ppr*ppt)*gr3/fp
-    christoffel(3,2,1)= (pprt-ppr*ppt)*gr3/fp
-    christoffel(3,1,3)= ppt
-    christoffel(3,3,1)= ppt
-    christoffel(3,2,2)= gr3*frrr -fp*(gr3+rp3/mk) -rr3 -mc3*s3*f3**2
-    christoffel(3,2,3)= gr3*christoffel(2,2,3) +ppr
-    christoffel(3,3,2)= gr3*christoffel(2,2,3) +ppr
-    christoffel(3,2,4)= gr3*christoffel(2,2,4) -s3**2*f3
-    christoffel(3,4,2)= gr3*christoffel(2,2,4) -s3**2*f3
-    christoffel(3,3,3)= -mk*gr3/fp
-    christoffel(3,4,4)= gr3*christoffel(2,4,4) -s3*c3
-    christoffel(4,1,2)= f3*mc3/s3*(ppt-christoffel(2,1,2))
-    christoffel(4,2,1)= f3*mc3/s3*(ppt-christoffel(2,1,2))
-    christoffel(4,1,4)= ppt
-    christoffel(4,4,1)= ppt
-    christoffel(4,2,2)= (mc3*(f3*(ppr-frrr-SSr) +fr3)-fp/mk*f3)/s3
-    christoffel(4,2,3)= f3-mc3*f3/s3*christoffel(2,2,3)
-    christoffel(4,3,2)= f3-mc3*f3/s3*christoffel(2,2,3)
-    christoffel(4,2,4)= ppr-mc3*f3/s3*christoffel(2,2,4)
-    christoffel(4,4,2)= ppr-mc3*f3/s3*christoffel(2,2,4)
-    christoffel(4,3,3)= mc3*mk*f3/fp/s3
-    christoffel(4,3,4)= c3/s3
-    christoffel(4,4,3)= c3/s3
-    christoffel(4,4,4)= -mc3*s3*f3*christoffel(2,3,3)
+    srr  = szpac(75)  
+    si = 1.0/s
+    si2 = si*si
+    si3 = si2*si
+    mk = 1.0 - k
+    mki = 1.0/mk
+    mksi = mk*si
+    mki2 = mki*mki
+    rs1 = aR*si
+    rs2 = rs1*rs1
+    th = PV(2)
+    ph = PV(3)
+    sth = sin(th)
+    cth = cos(th)
+    sph = sin(ph)
+    cph = cos(ph)
+    sthi = 1.0d0/sth
+    sth2 = sth*sth
+    mcth = 1.0d0 - cth
+    mcth2 = mcth*mcth
+    n   =  pr*cph + qr*sph
+    nr  =  prr*cph + qrr*sph
+    nd  = -pr*sph + qr*cph
+    ndr = -prr*sph + qrr*cph
+    nd2 = nd*nd
+    nsc = n*sth+sr*cth
+    mns = mcth*n + sr*sth
+    mnss = mns*s  
+    mns2 = mns*mns
 
-end subroutine christoffels
+    
+
+  
+    g11_part_1 = -mki*(  (aRr + rs1*(sr*cth + n*sth) )**2    )
+    g11_part_2 =  -rs2*( (sr*sth + n*mcth)**2 + (nd*mcth)**2  )
+
+    GIJ = 0.0d0
+    GIJ(0,0) = 1.0d0
+    GIJ(1,1) = g11_part_1 + g11_part_2
+    GIJ(1,2) = rs2*(s*sr*sth + s*n*mcth )
+    GIJ(2,1) = GIJ(1,2)
+    GIJ(1,3) = -rs2*s*nd*sth*mcth
+    GIJ(3,1) = GIJ(1,3)
+    GIJ(2,2) = -aR*aR
+    GIJ(3,3) = GIJ(2,2)*sth*sth
+    
+    GW = GIJ(1,1)*GIJ(2,2)*GIJ(3,3) - GIJ(1,2)*GIJ(2,1)*GIJ(3,3) - GIJ(1,3)*GIJ(2,2)*GIJ(3,1)
+    GWi = 1.0d0/GW
+    GINV = 0.0d0
+    GINV(0,0) = 1.0d0
+    GINV(0,1) = 0.0d0
+    GINV(0,2) = 0.0d0
+    GINV(0,3) = 0.0d0
+    GINV(1,0) = 0.0d0
+    GINV(1,1) = GIJ(2,2)*GIJ(3,3)*GWi
+    GINV(1,2) = -GIJ(1,2)*GIJ(3,3)*GWi
+    GINV(1,3) = -GIJ(1,3)*GIJ(2,2)*GWi
+    GINV(1,0) = 0.0d0
+    GINV(2,1) = -GIJ(2,1)*GIJ(3,3)*GWi
+    GINV(2,2) = (GIJ(1,1)*GIJ(3,3) - GIJ(1,3)*GIJ(3,1))*GWi
+    GINV(2,3) = GIJ(1,3)*GIJ(2,1)*GWi
+    GINV(3,0) = 0.0d0
+    GINV(3,1) = -GIJ(2,2)*GIJ(3,1)*GWi
+    GINV(3,2) =  GIJ(1,2)*GIJ(3,1)*GWi
+    GINV(3,3) = (GIJ(1,1)*GIJ(2,2) - GIJ(1,2)*GIJ(2,1))*GWi
+
+    GDER(0,0,0) = 0.0d0 
+    GDER(0,0,1) = 0.0d0 
+    GDER(0,0,2) = 0.0d0 
+    GDER(0,0,3) = 0.0d0 
+    GDER(0,1,0) = 0.0d0 
+    GDER(0,1,1) = 0.0d0 
+    GDER(0,1,2) = 0.0d0 
+    GDER(0,1,3) = 0.0d0 
+    GDER(0,2,0) = 0.0d0 
+    GDER(0,2,1) = 0.0d0 
+    GDER(0,2,2) = 0.0d0 
+    GDER(0,2,3) = 0.0d0 
+    GDER(0,3,0) = 0.0d0 
+    GDER(0,3,1) = 0.0d0 
+    GDER(0,3,2) = 0.0d0 
+    GDER(0,3,3) = 0.0d0 
+    GDER(1,0,0) = 0.0d0 
+    GDER(1,0,1) = 0.0d0 
+    GDER(1,0,2) = 0.0d0 
+    GDER(1,0,3) = 0.0d0 
+    GDER(1,1,0) = -2*mcth2*nd2*aR*aRt*si2- 2*mns2*aR*aRt*si2- (nsc*aR*si+ aRr)*(2*nsc*aRt*si+ 2*aRtr)*mki 
+    GDER(1,1,1) = 2*mcth2*nd2*aR2*sr*si3- 2*mcth2*nd2*aR*aRr*si2- mcth2*nd*2.0*ndr*aR2*si2+ 2*mns2*aR2*sr*si3
+    GDER(1,1,1)=GDER(1,1,1)-2*mns2*aR*aRr*si2-mns*(2*mcth*nr + 2*sth*srr)*aR2*si2
+    GDER(1,1,1)=GDER(1,1,1)-(nsc*aR*si+ aRr)*(-2*nsc*aR*sr*si2+2*nsc*aRr*si+2*(nr*sth+cth*srr)*aR*si+2*aRrr)*mki
+    GDER(1,1,1)=GDER(1,1,1)-(nsc*aR*si+ aRr)**2*kr*mki2 
+    GDER(1,1,2) = -2*mcth*nd2*aR2*sth*si2-mns*(2*n*sth+2*sr*cth)*aR2*si2-2*(n*cth-sr*sth)*(nsc*aR*si+aRr)*aR*mksi
+    GDER(1,1,3) = mcth2*nd*2.0*n*aR2*si2- 2*mcth*mns*nd*aR2*si2- 2*nd*(nsc*aR*si+ aRr)*aR*sth*mksi
+    GDER(1,2,0) = 2*mnss*aR*aRt*si2
+    GDER(1,2,1) = -2*mnss*aR2*sr*si3+ 2*mnss*aR*aRr*si2+ (mcth*n*sr + mcth*nr*s + s*sth*srr + sr*sth*sr)*aR2*si2
+    GDER(1,2,2) = (n*s*sth + s*sr*cth)*aR2*si2
+    GDER(1,2,3) = mcth*nd*aR2*si
+    GDER(1,3,0) = -2*mcth*nd*aR*sth*aRt*si
+    GDER(1,3,1) = mcth*nd*aR2*sth*sr*si2- 2*mcth*nd*aR*sth*aRr*si- mcth*ndr*aR2*sth*si
+    GDER(1,3,2) = -mcth*nd*aR2*cth*si- nd*aR2*sth2*si
+    GDER(1,3,3) = mcth*n*aR2*sth*si
+    GDER(2,0,0) = 0.0d0 
+    GDER(2,0,1) = 0.0d0 
+    GDER(2,0,2) = 0.0d0 
+    GDER(2,0,3) = 0.0d0 
+    GDER(2,1,0) = 2*mnss*aR*aRt*si2
+    GDER(2,1,1) = -2*mnss*aR2*sr*si3+ 2*mnss*aR*aRr*si2+ (mcth*n*sr + mcth*nr*s + s*sth*srr + sr*sth*sr)*aR2*si2
+    GDER(2,1,2) = (n*s*sth + s*sr*cth)*aR2*si2
+    GDER(2,1,3) = mcth*nd*aR2*si
+    GDER(2,2,0) = -2*aR*aRt 
+    GDER(2,2,1) = -2*aR*aRr 
+    GDER(2,2,2) = 0.0d0 
+    GDER(2,2,3) = 0.0d0 
+    GDER(2,3,0) = 0.0d0 
+    GDER(2,3,1) = 0.0d0 
+    GDER(2,3,2) = 0.0d0 
+    GDER(2,3,3) = 0.0d0 
+    GDER(3,0,0) = 0.0d0 
+    GDER(3,0,1) = 0.0d0 
+    GDER(3,0,2) = 0.0d0 
+    GDER(3,0,3) = 0.0d0 
+    GDER(3,1,0) = -2*mcth*nd*aR*sth*aRt*si
+    GDER(3,1,1) = mcth*nd*aR2*sth*sr*si2- 2*mcth*nd*aR*sth*aRr*si- mcth*ndr*aR2*sth*si
+    GDER(3,1,2) = -mcth*nd*aR2*cth*si- nd*aR2*sth2*si
+    GDER(3,1,3) = mcth*n*aR2*sth*si
+    GDER(3,2,0) = 0.0d0 
+    GDER(3,2,1) = 0.0d0 
+    GDER(3,2,2) = 0.0d0 
+    GDER(3,2,3) = 0.0d0 
+    GDER(3,3,0) = -2*aR*sth2*aRt 
+    GDER(3,3,1) = -2*aR*sth2*aRr 
+    GDER(3,3,2) = -2*aR2*sth*cth 
+    GDER(3,3,3) = 0.0d0 
+
+    do I=0,3
+        do J=0,3
+            do G=0,3
+    GAM(I,J,G) = 0.0
+    do H=0,3
+    GAM(I,J,G) = GAM(I,J,G) + 0.5d0*GINV(I,H)*(GDER(H,G,J) + GDER(J,H,G) - GDER(J,G,H))
+    enddo
+            enddo
+        enddo
+    enddo
+
+
+end subroutine christoffels2
 !-------------------------------------------
 
-
-
-
-
-
-subroutine fluid_variables(szpac,point,npoint,fluid)
+subroutine fluid_variables(szpac,npoint,point,fluid)
 ! calulates the fluid variables: 
 ! density (rho), expansion (tht), shear (shr), Weyl (wey), 3D Ricci (ric)
 ! based on eq. (3.2), (3.3), (3.4), (3.5), and (3.7) of arxiv:1704.02810
@@ -544,17 +786,16 @@ subroutine fluid_variables(szpac,point,npoint,fluid)
     double precision,  dimension (100) :: szpac  
     integer, intent(in) :: npoint
     double precision,  dimension (npoint) :: point
+    double precision,  dimension (10), intent(out) :: fluid
     double precision :: t,r,theta,phi
     double precision :: m,mi,mr,mrr,k,ki,kr,krr,q,qr,qrr,p,pr,prr,s,sr,srr,si,n,epr
-    
     double precision :: redshift, zz2, zz3,zz4,ez,gzn,hzn
     double precision :: f12,f13,f16,f19    
     double precision :: rho1,rho2,tht1,tht2,shr1,shr2,wey1,wey2,ric1,ric2
     double precision :: density, expansion, shear, weyl, ricci,areal,proper
     double precision :: aRi,aRi2,aRi3,denumerator
     double precision :: aR, aRt, aRr, aRrr, aRtr, aRtrr, rpR  
-    double precision,  dimension (10), intent(out) :: fluid
-    
+
     t = point(1)
     r = point(2)
     theta = point(3)
@@ -586,7 +827,7 @@ subroutine fluid_variables(szpac,point,npoint,fluid)
     gzn = 1.0d0/zz3
     hzn = 1.0d0/ez
 
-    call areal_radius(szpac,point,npoint,aR,aRt, aRr, aRrr, aRtr, aRtrr)
+    call areal_radius(szpac,npoint,point,aR,aRt, aRr, aRrr, aRtr, aRtrr)
     call radial_proper_distance(szpac,point,npoint,aR,aRr,rpR)
    
     areal = aR
@@ -599,7 +840,6 @@ subroutine fluid_variables(szpac,point,npoint,fluid)
     f13 = 1.0d0/3.0d0
     f16 = f12*f13
     f19 = f13*f13
-    
     
     ki = 1.0d0/k
     mi = 1.0d0/m
@@ -629,7 +869,6 @@ subroutine fluid_variables(szpac,point,npoint,fluid)
     ric2 = 1.0d0 + (aR*kr*ki - 2.0*aR*epr)*denumerator
     ricci = ric1*ric2
 
-
     fluid(1) = density
     fluid(2) = expansion
     fluid(3) = shear
@@ -642,7 +881,7 @@ subroutine fluid_variables(szpac,point,npoint,fluid)
 end subroutine fluid_variables
 !--------------------------------------------------
 
-subroutine areal_radius(szpac,point,npoint,aR,aRt, aRr, aRrr, aRtr, aRtrr)
+subroutine areal_radius(szpac,npoint,point,aR,aRt, aRr, aRrr, aRtr, aRtrr)
 ! calulates areal distace R and its derivatives  
 ! areal distance at time t: aR
 ! time derivatice areal distance at time t: aRt
@@ -660,7 +899,7 @@ subroutine areal_radius(szpac,point,npoint,aR,aRt, aRr, aRrr, aRtr, aRtrr)
     double precision,  dimension (npoint) :: point
     integer :: I,Ni
     double precision :: dti,dt,time
-    double precision :: aR,aRt, aRr, aRrr, aRtr, aRtrr
+    double precision :: aR,aRt, aRr, aRrr, aRtr, aRtrr, aRi
     double precision :: q,qr,qrr,p,pr,prr,s,sr,srr
     double precision :: m,mr,mrr,k,kr,krr,l
     double precision :: kr1,kr2,kr3,kr4
@@ -670,6 +909,7 @@ subroutine areal_radius(szpac,point,npoint,aR,aRt, aRr, aRrr, aRtr, aRtrr)
     double precision :: rr,rrp,rtr
     double precision :: rrr,rrrp,rtrr
 
+! FIX needed: time to point(6) only
 
     if(point(7)<0.5) then   
        time = point(1)
@@ -677,12 +917,15 @@ subroutine areal_radius(szpac,point,npoint,aR,aRt, aRr, aRrr, aRtr, aRtrr)
        time = point(6)
     endif
     
-    dti = 105.0
+
+! FIX needed: adaptive step
+    dti = 2048.0
     Ni = int( abs(time/dti) )
     if(Ni.le.3) Ni = 3
+
+    Ni = 32
     l = szpac(26)
     dt = time/(Ni*1.0d0)
-	
 	
     r = point(2)
     rr = 1.0d0
@@ -704,7 +947,7 @@ subroutine areal_radius(szpac,point,npoint,aR,aRt, aRr, aRrr, aRtr, aRtrr)
     sr   = szpac(74) 
     srr  = szpac(75) 
     
-
+! FIX needed: rt,rtr,rtrr -> into array
     do I=1,Ni
       rp = r
       rrp = rr
@@ -762,7 +1005,9 @@ subroutine areal_radius(szpac,point,npoint,aR,aRt, aRr, aRrr, aRtr, aRtrr)
       rrr = rrrp
     enddo
 
-    rt = dsqrt(2.0d0*(m/rp) - k + (l/3.0d0)*rp*rp)
+! FIX needed: adaptive step interpolation 
+
+    rt = sqrt(2.0d0*(m/rp) - k + (l/3.0d0)*rp*rp)
     rtr = ((mr/rp) - (m/(rp**2))*rrp - 0.5d0*kr +  (l/3d0)*rp*rrp)/rt
     rtrr = (mrr/rp)  - 2.0d0*(mr/(rp**2))*rrp - (m/(rp**2))*rrrp
     rtrr = rtrr + 2.0d0*(m/(rp**3))*(rrp**2) - 0.5d0*krr 
@@ -774,6 +1019,18 @@ subroutine areal_radius(szpac,point,npoint,aR,aRt, aRr, aRrr, aRtr, aRtrr)
     aRrr  = rrr
     aRtr  = rtr
     aRtrr = rtrr
+    aRi   = 1.0d0/r
+
+    szpac(80) = aRi 
+    szpac(81) = aR
+    szpac(82) = aRr
+    szpac(83) = aRrr
+    szpac(84) = aRt
+    szpac(85) = aRtr
+    szpac(86) = aRtrr
+
+
+
 
 end subroutine areal_radius
 !--------------------------------------------------
@@ -793,13 +1050,11 @@ subroutine radial_proper_distance(szpac,point,npoint,aR,aRr,rpR)
     r = point(2)
     theta = point(3)
     phi = point(4)
-
     f16 = 1.0d0/6.0d0
-    Ni = 124
+    Ni = 32
     dr = r/(1.0d0*Ni)
     ri = dr
     rout = 0.0d0
-
     do I =1,Ni
       rint = ri 
       call szekeres_specifics(szpac,rint)
@@ -871,22 +1126,152 @@ subroutine radial_proper_distance(szpac,point,npoint,aR,aRr,rpR)
       rout = rout + f16*(kr1+2.0d0*(kr2+kr3)+kr4)
       ri = rint
     enddo
-
 rpR = rout
-
 end subroutine radial_proper_distance
 !--------------------------------------------------
 
+subroutine areal_evolution(szpac,PV)
+    implicit none
+        
+    double precision,  dimension (100) :: szpac  
+    double precision, dimension(0:3), intent(in) :: PV
 
+    integer :: I,Ni
+    double precision :: dti,dt,time
+    double precision :: aR,aRt, aRr, aRrr, aRtr, aRtrr, aRi
+    double precision :: q,qr,qrr,p,pr,prr,s,sr,srr
+    double precision :: m,mr,mrr,k,kr,krr,l
+    double precision :: kr1,kr2,kr3,kr4
+    double precision :: krr1,krr2,krr3,krr4
+    double precision :: krrr1,krrr2,krrr3,krrr4
+    double precision :: r,rp,rt
+    double precision :: rr,rrp,rtr
+    double precision :: rrr,rrrp,rtrr
+
+
+    time = szpac(10) + PV(0)
+
+! FIX needed: adaptive step
+
+    dti = 1024.0
+    Ni = int( abs(time/dti) )
+    if(Ni.le.3) Ni = 3
+    l = szpac(26)
+    dt = time/(Ni*1.0d0)
+	
+    r = PV(1)
+    rr = 1.0d0
+    rrr = 0.0d0
+    
+    call szekeres_specifics(szpac,r)
+
+    m    = szpac(61) 
+    mr   = szpac(62) 
+    mrr  = szpac(63) 
+    k    = szpac(64)
+    kr   = szpac(65) 
+    krr  = szpac(66) 
+    q    = szpac(67) 
+    qr   = szpac(68) 
+    qrr  = szpac(69) 
+    p    = szpac(70) 
+    pr   = szpac(71) 
+    prr  = szpac(72) 
+    s    = szpac(73) 
+    sr   = szpac(74) 
+    srr  = szpac(75) 
+    
+! FIX needed: rt,rtr,rtrr -> into array (for legandre intepolation)
+
+    do I=1,Ni
+      rp = r
+      rrp = rr
+      rrrp = rrr
+      rt = dsqrt(2.0d0*(m/rp) - k + (l/3.0d0)*rp*rp)
+      rtr = ((mr/rp) - (m/(rp**2))*rrp - 0.5d0*kr +  (l/3d0)*rp*rrp)/rt
+      rtrr = (mrr/rp)  - 2.0d0*(mr/(rp**2))*rrp - (m/(rp**2))*rrrp
+      rtrr = rtrr + 2.0d0*(m/(rp**3))*(rrp**2) - 0.5d0*krr 
+      rtrr = rtrr + (l/3.0d0)*(rrp**2 + rp*rrrp) - rtr*rtr
+      rtrr = rtrr/rt
+      kr1   = dt*rt
+      krr1  = dt*rtr
+      krrr1 = dt*rtrr
+      rp   = r   + kr1*5d-1
+      rrp  = rr  + krr1*5d-1
+      rrrp = rrr + krrr1*5d-1
+      rt = dsqrt(2.0d0*(m/rp) - k + (l/3.0d0)*rp*rp)
+      rtr = ((mr/rp) - (m/(rp**2))*rrp - 0.5d0*kr +  (l/3d0)*rp*rrp)/rt
+      rtrr = (mrr/rp)  - 2.0d0*(mr/(rp**2))*rrp - (m/(rp**2))*rrrp
+      rtrr = rtrr + 2.0d0*(m/(rp**3))*(rrp**2) - 0.5d0*krr 
+      rtrr = rtrr + (l/3.0d0)*(rrp**2 + rp*rrrp) - rtr*rtr
+      rtrr = rtrr/rt
+      kr2   = dt*rt
+      krr2  = dt*rtr
+      krrr2 = dt*rtrr
+      rp   = r   + kr2*5d-1
+      rrp  = rr  + krr2*5d-1
+      rrrp = rrr + krrr2*5d-1
+      rt = dsqrt(2.0d0*(m/rp) - k + (l/3.0d0)*rp*rp)
+      rtr = ((mr/rp) - (m/(rp**2))*rrp - 0.5d0*kr +  (l/3d0)*rp*rrp)/rt
+      rtrr = (mrr/rp)  - 2.0d0*(mr/(rp**2))*rrp - (m/(rp**2))*rrrp
+      rtrr = rtrr + 2.0d0*(m/(rp**3))*(rrp**2) - 0.5d0*krr 
+      rtrr = rtrr + (l/3.0d0)*(rrp**2 + rp*rrrp) - rtr*rtr
+      rtrr = rtrr/rt
+      kr3   = dt*rt
+      krr3  = dt*rtr
+      krrr3 = dt*rtrr
+      rp   = r   + kr3
+      rrp  = rr  + krr3
+      rrrp = rrr + krrr3
+      rt = dsqrt(2.0d0*(m/rp) - k + (l/3.0d0)*rp*rp)
+      rtr = ((mr/rp) - (m/(rp**2))*rrp - 0.5d0*kr +  (l/3d0)*rp*rrp)/rt
+      rtrr = (mrr/rp)  - 2.0d0*(mr/(rp**2))*rrp - (m/(rp**2))*rrrp
+      rtrr = rtrr + 2.0d0*(m/(rp**3))*(rrp**2) - 0.5d0*krr 
+      rtrr = rtrr + (l/3.0d0)*(rrp**2 + rp*rrrp) - rtr*rtr
+      rtrr = rtrr/rt
+      kr4   = dt*rt
+      krr4  = dt*rtr
+      krrr4 = dt*rtrr
+      rp   = r   + (kr1  +2.0d0*kr2  +2.0d0*kr3  +kr4)/6.0d0
+      rrp  = rr  + (krr1 +2.0d0*krr2 +2.0d0*krr3 +krr4)/6.0d0
+      rrrp = rrr + (krrr1+2.0d0*krrr2+2.0d0*krrr3+krrr4)/6.0d0
+      r   = rp
+      rr  = rrp
+      rrr = rrrp
+    enddo
+
+! FIX needed: adaptive step interpolation 
+
+    rt = sqrt(2.0d0*(m/rp) - k + (l/3.0d0)*rp*rp)
+    rtr = ((mr/rp) - (m/(rp**2))*rrp - 0.5d0*kr +  (l/3d0)*rp*rrp)/rt
+    rtrr = (mrr/rp)  - 2.0d0*(mr/(rp**2))*rrp - (m/(rp**2))*rrrp
+    rtrr = rtrr + 2.0d0*(m/(rp**3))*(rrp**2) - 0.5d0*krr 
+    rtrr = rtrr + (l/3.0d0)*(rrp**2 + rp*rrrp) - rtr*rtr
+    rtrr = rtrr/rt
+    aR    = r
+    aRt   = rt
+    aRr   = rr
+    aRrr  = rrr
+    aRtr  = rtr
+    aRtrr = rtrr
+    aRi   = 1.0d0/r
+
+    szpac(80) = aRi 
+    szpac(81) = aR
+    szpac(82) = aRr
+    szpac(83) = aRrr
+    szpac(84) = aRt
+    szpac(85) = aRtr
+    szpac(86) = aRtrr
+
+
+end subroutine areal_evolution
+!--------------------------------------------------
 
 subroutine look_back_time(szpac,redshift,time)
-
 ! calculates the lookback time, BUT....
 ! the convention here:
-! it is negative
-! it is in Kpc !
-
-
+! it is negative, it is in Kpc !
     implicit none
     integer :: I,Ni
     double precision,  dimension (100), intent(in) :: szpac  
@@ -941,20 +1326,19 @@ subroutine time_evolution(szpac,redshift,time)
     time = szpac(10) + lookback
 end subroutine time_evolution
 !--------------------------------------------------
-subroutine age_from_initial(szpac,z_initial,time)
+subroutine age_from_initial(szpac)
     implicit none
     integer :: I,Ni
-    double precision,  dimension (100), intent(in) :: szpac  
-    double precision, intent(in) :: z_initial
-    double precision, intent(out) :: time
+    double precision,  dimension (100) :: szpac  
     double precision :: omega_matter,omega_lambda,omega_curvature,omega_radiation
     double precision :: Ho, Haa,da,ai,a,ia1,ia2,ia3,ia4
-    double precision :: t_rk1,t_rk2,t_rk3,t_rk4,ti,t,f16 
+    double precision :: z_initial,t_rk1,t_rk2,t_rk3,t_rk4,ti,t,f16
     Ho = szpac(11)
     omega_matter =  szpac(3)
     omega_lambda =  szpac(2)
     omega_radiation = szpac(7)
     omega_curvature = szpac(9)
+    z_initial = szpac(30) 
     Ni = 4096
     f16 = 1.0d0/6.0d0
     ti = 0d0
@@ -988,7 +1372,8 @@ subroutine age_from_initial(szpac,z_initial,time)
         ti = t
         ai = a
     enddo
-    time = t 
+    szpac(10) = t 
+    
 end subroutine age_from_initial
 !--------------------------------------------------
 subroutine redshift_lcdm(szpac,time,redshift)
@@ -1031,44 +1416,32 @@ subroutine szekeres_specifics(szpac,r)
     double precision :: p,pr,prr    
     double precision :: q,qr,qrr        
     double precision :: dta0,dta1,dta2,d0el,d1el,d2el
-    double precision :: r0,dlr,Om,Ak,Am,amp,ho,alpha
+    double precision :: r0,dlr,Ak,Am,amp,alpha
 
-    Om = szpac(3)
     amp = szpac(51)
-    ho = szpac(11)
     r0 = szpac(52)
     dlr = szpac(53)*r0
-    
-    
     Am = (1.0d0/6.0d0)*szpac(31)
     Ak = (14.0d0/3.0d0)*Am
- 
-
     dta0 = dtanh((r-r0)/(2.0d0*dlr))
     dta1 = (1.0d0 - dta0**2)*(1.0d0/(2.0d0*dlr))
     dta2 = -dta0*dta1/dlr
     d0el = amp*0.5d0*(1.0d0 - dta0)
     d1el = -amp*0.5d0*dta1
     d2el = -amp*0.5d0*dta2
-
     m = Am*(1 + d0el)*r*r*r
     mr = Am*d1el*r*r*r + 3.0d0*(m/r)
     mrr = Am*d2el*(r**3)+3d0*Am*d1el*r*r+3d0*(mr/r)-3.0d0*(m/(r*r))
-
     k = Ak*d0el*r*r
     kr = Ak*d1el*r*r + 2.0*(k/r)
     krr = Ak*d2el*r*r + 2.0*Ak*d1el*r + 2.0*kr/r - 2.0*(k/(r*r))
-    
     alpha = szpac(54) 
-
     q = 1.0d0
     qr = 0.0d0
     qrr = 0.0d0
-
     p = 1.0d0
     pr = 0.0d0
     prr = 0.0d0
-
     if (alpha < 0.01 .or. alpha > 0.99) then
        s = 1.0d0
        sr = 0.0d0
@@ -1078,7 +1451,6 @@ subroutine szekeres_specifics(szpac,r)
        sr = alpha*(r**(alpha-1.0))
        srr = alpha*(alpha-1.0)*(r**(alpha-2.0))
     endif
-
 
     szpac(60) = r
     szpac(61) = m
@@ -1097,20 +1469,39 @@ subroutine szekeres_specifics(szpac,r)
     szpac(74) = sr
     szpac(75) = srr
 
-
-
-
 end subroutine szekeres_specifics
 !--------------------------------------------------
 
-subroutine parameter_names(szpan)
+subroutine parameter_names(print_names,szpac,szpan)
     implicit none
+    integer :: I
+    logical :: print_names 
+    double precision, dimension (100) :: szpac  
     character(len=8), dimension(100) :: szpan
 
     szpan = ''
     szpan(1) = "H0"
     szpan(2) = "Ol0"
     szpan(3) = "Om0"
+    szpan(4) = "Omb"
+    szpan(5) = "Omc"
+    szpan(7) = "Om_rad"
+    szpan(9) = "Om_cur"
+    szpan(11) = "Ho/c"
+    szpan(21) = "c/Ho"
+    szpan(22) = "rho_0"
+    szpan(24) = "c"
+    szpan(30) = "z_init"
+    szpan(51) = "contrast"
+    szpan(52) = "radius"
+    szpan(53) = "slope" 
+    szpan(54) = "dipole"
+
+    if ( print_names ) then
+        do I=1,100
+            print *, szpan(I),szpac(I)
+        enddo
+    endif
 
 end subroutine parameter_names
 
@@ -1123,7 +1514,7 @@ subroutine parameter_values(npypac,pypac, npyszek,pyszek, szpac)
     double precision,  dimension (100) :: szpac    
 
 
-    double precision :: H0,Ho,little_h,age,z_initial
+    double precision :: H0,Ho,little_h,z_initial
     double precision :: contrast, radius, slope, dipole    
     double precision :: omega_matter,omega_baryon,omega_cold
     double precision :: omega_lambda,omega_photon,omega_radiation,omega_curvature
@@ -1136,34 +1527,27 @@ subroutine parameter_values(npypac,pypac, npyszek,pyszek, szpac)
 ! szpac(51-90)  -> parameters relate to inhomogeneous setup 
 ! szpac(91-100) -> reserve for special flags 
     
-  
 
-! from python:    
+  ! FIX needed: ensure this is just done one, not later
     if(szpac(100) > 1.0) then
        H0 = pypac(1)
        omega_matter = pypac(2)
        omega_lambda = pypac(3)    
-       
        contrast = pyszek(1)
        radius = pyszek(2)
        slope = pyszek(3)
        dipole = pyszek(4)
-       
     else
        H0 = 70.0d0
        omega_matter = 0.3
        omega_lambda = 1.0d0-omega_matter
-       
-       contrast = -0.0025
+       contrast = -0.0015
        radius = 10.0
        slope  = 0.4
-       dipole = 0.4
-       
+       dipole = 0.3
     endif
 
 
-
-    
 ! units: time in 10^6 years, length in Kpc, mass in 10^15 M_{\odot}
     mass_unit=1.989d45
     length_unit=3.085678d19
@@ -1192,7 +1576,7 @@ subroutine parameter_values(npypac,pypac, npyszek,pyszek, szpac)
     omega_radiation = omega_photon* (1.0d0 + (7.0d0/8.0d0)*Neff*((4.0d0/11.0d0)**(4.0d0/3.0d0)))  
     w_radiation = w_photon* (1.0d0 + (7.0d0/8.0d0)*Neff*((4.0d0/11.0d0)**(4.0d0/3.0d0)))  
     omega_curvature = 1.0d0 - omega_matter - omega_lambda - omega_radiation
-    z_initial = 1089.80  
+    z_initial = 189.80  
     
     omega_baryon = 0.0
     omega_cold = 0.0 
@@ -1225,14 +1609,16 @@ subroutine parameter_values(npypac,pypac, npyszek,pyszek, szpac)
 
     szpac(30) = z_initial
     szpac(31) = gkr*( (1.0d0 + z_initial)**3)
+    szpac(32) = pi 
+    szpac(33) = pi/180.0 
+  
 
     szpac(51) = contrast
     szpac(52) = radius    
     szpac(53) = slope
     szpac(54) = dipole
 
-    call age_from_initial(szpac,z_initial, age)
-    szpac(10) = age
+
     
 end subroutine parameter_values
 

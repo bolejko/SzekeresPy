@@ -18,7 +18,7 @@ SzekeresPy is a Python package for cosmological calculations using the Szekeres 
 
 ## Installation 
 
-To compile the code, navigate to the folder with the above files and run the terminal commands listed either in the file `compile_single` or `compile_openmp` (for openMP)
+To compile the code, navigate to the folder with the above files and run the terminal commands listed either in the file `compile_single` or `compile_openmp` (for openMP). 
 
 
 ## Running the code
@@ -29,7 +29,7 @@ Open the file `sample.py` and follow the sample calculations
 ## Development plans
 
 - ~~ver 0.1: evolution of a model~~
-- ver 0.2: light propagation 
+- ver 0.2: light propagation
 - ver 0.3: distance-redshift relation
 - ver 0.4: volume average with a variable position of the observer and radius of the averaging domain
 - ver 0.5: ray-tracing and sky maps 
@@ -39,6 +39,7 @@ Open the file `sample.py` and follow the sample calculations
 ## Useful references
 
 - https://arxiv.org/abs/astro-ph/0604490
+- https://arxiv.org/abs/1412.4976
 - https://arxiv.org/abs/1512.07364
 - https://arxiv.org/abs/1704.02810
 - unpublished notes on light tracing in the Szekeres model (contact the author for a copy)

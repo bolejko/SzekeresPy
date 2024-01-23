@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.18 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.19 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: sample.py
 # 
@@ -39,33 +39,36 @@ print("FLRW background at redshft {:.2f}, H(z) = {:.2f}, Om(z) = {:.2f}, and Ol(
 #setting the position of the observer, and checking the density, expansion, shear, weyl curvature at their locations 
 t = 0 
 r = 10.0 
-theta = 0.85*np.pi 
+theta = 0.75*np.pi 
 phi = np.pi
 redshift = 0.0
 density, expansion, shear, weyl  = szekeres_cosmo.fluid(t,r,theta,phi,redshift)  
-print("Relative to FLRW at redshft {:.2f}, density = {:.2f}, expansion rate = {:.2f}, shear = {:.2f}, Weyl = {:.2f}".format(redshift,density,expansion,shear,weyl))
+print("Relative to FLRW at redshft z= {:.2f}, density = {:.2f}, expansion rate = {:.2f}, shear = {:.2f}, Weyl = {:.2f}".format(redshift,density,expansion,shear,weyl))
 
-
+figure_flag = True
 #creating a 1d radial plot with r_max = r, in the direction of constant theta and phi, at a given redshift
-redshift = 0.1
+redshift = 0.6
 r = 50.0
 radius, density,expansion,shear,weyl = szekeres_cosmo.fluid_1d(t,r,theta,phi,redshift)  
 plt.figure()
 plt.plot(radius,density,radius,expansion,radius,shear,radius,weyl)
 plt.grid()
-plt.show(block=False)
+plt.show(block=figure_flag)
+
+#getting data cubes at given redshift 
+redshift = 0.6
+grid, density,expansion,shear,weyl = szekeres_cosmo.fluid_3d(t,r,theta,phi,redshift,grid_flag = "proper")  
 
 
+
+
+figure_flag = False
 #creating a 1d radial plot of the path of the light ray
-print("work in PROGRESS - so not results in Figure 2 yet")
 light_ray =  szekeres_cosmo.null_geodesic(t,r,theta,phi,redshift)  
 plt.figure()
-plt.plot(light_ray[1,:],light_ray[0,:]) # plot of t(r) 
+plt.plot(light_ray[5,:],light_ray[4,:]) # plot of t(r) 
 plt.grid()
-plt.show(block=False)
-
-
-
-
+plt.show(block=figure_flag)
+    
 
 

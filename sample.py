@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.19 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.20 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: sample.py
 # 
@@ -21,54 +21,115 @@
 #########################################################################################################
 
 
+from SzekeresPy import SzekeresModel as szekeres_cosmo  
+
+
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits import mplot3d
 
 
-from   SzekeresPy  import SzekeresModel  as  szekeres_cosmo  # ALTERNATIVELY:  import SzekeresPy as szpy  ->  szekeres_cosmo = szpy.initiate()  
-#from astropy.cosmology import Planck18  as  astropy_cosmo
 
 
-#check the parameters of the background FLRW model
+#-------------------------------------------------------------
+#>>>> EXAMPLE 1: checking and updating cosmological parameters 
+#-------------------------------------------------------------
 redshift = 0.15
 H = szekeres_cosmo.H(redshift)
 Om = szekeres_cosmo.Om(redshift)
 Ode = szekeres_cosmo.Ode(redshift)
 print("FLRW background at redshft {:.2f}, H(z) = {:.2f}, Om(z) = {:.2f}, and Ol(z) = {:.2f}".format(redshift,H,Om,Ode))
 
+#update the parameters (only present day paramaters can be updated)
+szekeres_cosmo.update(Ode0 = 0.68, Om0 = 0.32, H0 = 67.5)
+
+#checking if the update was succesful
+redshift = 0.0
+H = szekeres_cosmo.H(redshift)
+Om = szekeres_cosmo.Om(redshift)
+Ode = szekeres_cosmo.Ode(redshift)
+print("FLRW background at redshft {:.2f}, H(z) = {:.2f}, Om(z) = {:.2f}, and Ol(z) = {:.2f}".format(redshift,H,Om,Ode))
+
+
+
+#-------------------------------------------------------------
+#>>>> EXAMPLE 2: Using astropy to set the cosmological parameters
+#-------------------------------------------------------------
+from astropy.cosmology import Planck18  as  astropy_cosmo
+import SzekeresPy
+szekeres_cosmo = SzekeresPy.initiate(astropy_cosmo) 
+
+
+
+#-------------------------------------------------------------
+#>>>> EXAMPLE 3: checking the properties of the Szekeres model at a given point
+#-------------------------------------------------------------
 #setting the position of the observer, and checking the density, expansion, shear, weyl curvature at their locations 
 t = 0 
 r = 10.0 
-theta = 0.75*np.pi 
+theta = 0.25*np.pi 
 phi = np.pi
 redshift = 0.0
 density, expansion, shear, weyl  = szekeres_cosmo.fluid(t,r,theta,phi,redshift)  
 print("Relative to FLRW at redshft z= {:.2f}, density = {:.2f}, expansion rate = {:.2f}, shear = {:.2f}, Weyl = {:.2f}".format(redshift,density,expansion,shear,weyl))
 
-figure_flag = True
-#creating a 1d radial plot with r_max = r, in the direction of constant theta and phi, at a given redshift
-redshift = 0.6
-r = 50.0
+
+
+#-------------------------------------------------------------
+#>>>> EXAMPLE 4: plotting a 1d radial profile with R = r_max:
+# density, expansion scalar, shear scalar, Weyl curvature scalar
+#-------------------------------------------------------------
+redshift = 0.34 
+r = 50.0   # this will be (approximetly) the max R
+theta = 0.75*np.pi   # direction in which you want to see the 1d profile
+phi = np.pi          # direction in which you want to see the 1d profile
+
 radius, density,expansion,shear,weyl = szekeres_cosmo.fluid_1d(t,r,theta,phi,redshift)  
 plt.figure()
-plt.plot(radius,density,radius,expansion,radius,shear,radius,weyl)
+plt.plot(radius,density,   radius,expansion,    radius,shear,    radius,weyl)
 plt.grid()
-plt.show(block=figure_flag)
-
-#getting data cubes at given redshift 
-redshift = 0.6
-grid, density,expansion,shear,weyl = szekeres_cosmo.fluid_3d(t,r,theta,phi,redshift,grid_flag = "proper")  
+plt.show()
 
 
 
-
-figure_flag = False
-#creating a 1d radial plot of the path of the light ray
-light_ray =  szekeres_cosmo.null_geodesic(t,r,theta,phi,redshift)  
+#-------------------------------------------------------------
+#>>>> EXAMPLE 5: #creating a 1d radial plot with R = r_max,
+# and comparring density in 2 different directions
+#-------------------------------------------------------------
+redshift = 0.45
+r = 50.0   # this will be (approximetly) the max R
+theta1 = 0.05*np.pi   # direction in which you want to see the 1d profile
+radius1, density1, expansion1,shear1,weyl1 = szekeres_cosmo.fluid_1d(t,r,theta1,phi,redshift)
+theta2 = 0.75*np.pi   # direction in which you want to see the 1d profile
+radius2, density2, expansion2,shear2,weyl2 = szekeres_cosmo.fluid_1d(t,r,theta2,phi,redshift)
 plt.figure()
-plt.plot(light_ray[5,:],light_ray[4,:]) # plot of t(r) 
+plt.plot(radius1,density1,    radius2,density2)
 plt.grid()
-plt.show(block=figure_flag)
+plt.show()
+
+
+
+#-------------------------------------------------------------
+#>>>> EXAMPLE 6: #light cone
+# to get a null cone you need to specify:
+#  (i) the position of the observer
+#  (ii) the direction
+#  (iii) the redshift 
+#-------------------------------------------------------------
+r =50.0 
+theta = 0.25*np.pi   
+phi = 1.25*np.pi
+RA = 12.0
+DEC = -45.0 
+
+observer = r, theta, phi
+direction = RA, DEC
+redshift = 4.40
+
+#creating a 1d the path of the light ray
+light_ray =  szekeres_cosmo.null_geodesic(observer,direction,redshift)  
+plt.figure()
+plt.plot(light_ray[1,:],light_ray[0,:]) # plot of t(R): t in Gyr, R in Mpc
+plt.grid()
+plt.show()
     
-
-

@@ -11,7 +11,8 @@ SzekeresPy is a Python package for cosmological calculations using the Szekeres 
 - files: 
   * szekeres_fortran.f90 
   * SzekeresPy.py 
-- matplotlib
+- matplotlib (for plotting)
+- scipy (for plotting)
 - optional: astropy (for comparison and/or importing cosmological parameters) 
 - optional: healpy (for sky maps)
 
@@ -23,17 +24,23 @@ To compile the code, navigate to the folder with the above files and run the ter
 
 ## Running the code
 
-Open the file `sample.py` and follow the sample calculations
+Open the file `sample.py` and follow the sample calculations and examples presented in the file:
+
+- Example 1: checking and updating cosmological parameters 
+- Example 2: using astropy to set the cosmological parameters
+- Example 3: checking the properties of the Szekeres model at a given point (density, expansion rate, shear, Weyl)
+- Example 4: plotting a 1d radial profile (for a specific direction) of: density, expansion rate, shear, Weyl 
+- Example 5: comparing radial density profile for two different directions
+- Example 6: plotting a path of the light ray, t(R), featuring the apparent horizon (around R = 3000 Mpc)
 
 
 ## Development plans
 
 - ~~ver 0.1: evolution of a model~~
-- ver 0.2: light propagation
+- ~~ver 0.2: light propagation~~
 - ver 0.3: distance-redshift relation
-- ver 0.4: volume average with a variable position of the observer and radius of the averaging domain
-- ver 0.5: ray-tracing and sky maps 
-- ver 0.6: change of the type of licence anticipated
+- ver 0.4: ray-tracing and sky maps 
+- ver 0.5: volume average with a variable position of the observer and radius of the averaging domain
 
 
 ## Useful references

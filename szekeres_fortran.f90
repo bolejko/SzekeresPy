@@ -1,5 +1,5 @@
 !########################################################################################################
-! SzekeresPy ver. 0.20 - Python package for cosmological calculations using the Szekeres Cosmological Model
+! SzekeresPy ver. 0.21 - Python package for cosmological calculations using the Szekeres Cosmological Model
 ! 
 ! File: szekeres_fortran.f90
 ! 
@@ -209,7 +209,7 @@ subroutine link_cube(input_data,rho,tht,shr,wey,ric,com,prp)
     integer, parameter :: npyszek = 15
     integer, parameter :: npoint = 7
     integer, parameter :: ngrid = 100
-    integer, parameter :: nbox = 4
+    integer, parameter :: nbox = 20
     integer, parameter :: nsize = nbox*2 +1
     integer, parameter :: npix = nsize*nsize*nsize 
     integer :: ngrid000, igx,igy,igz,ib
@@ -292,7 +292,7 @@ subroutine link_cube(input_data,rho,tht,shr,wey,ric,com,prp)
        prp(ib,2) = fluid(6)*sin(szpoint(3))*sin(szpoint(4))
        prp(ib,3) = fluid(6)*cos(szpoint(3))
 
-    write(303,*) com(ib,:),rho(ib)
+!    write(303,*) com(ib,:),rho(ib)
 !    write(304,*) prp(ib,:),rho(ib)
    
    

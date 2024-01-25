@@ -1,6 +1,9 @@
 ## Introduction
 
-SzekeresPy is a Python package for cosmological calculations using the Szekeres Cosmological Model. The code is still in its early development. Debugging, optimisation, and restructuring of the code is still in progress. Anyone interested in collaboration or using the code is encouraged to contact the author.
+SzekeresPy is a Python package for cosmological calculations using the Szekeres Cosmological Model. The Szekeres model is an inhomogeneous, anisotropic, cosmological solution of Einstein's equations. In the limit of spherical symmetry it reduces to the Lemaitre-Tolman-Bondi (LTB) class of models, and in the limit of homogeneity, to FLRW models.
+The SzekeresPy can therefore be used to investigate LTB models or to perform calculations for FLRW cosmologies, including the ΛCDM model.
+
+The code is still in its early development. Debugging, optimisation, and restructuring of the code is still in progress. Anyone interested in collaboration or using the code is encouraged to contact the author.
 
 
 ## Requirements 
@@ -12,7 +15,6 @@ SzekeresPy is a Python package for cosmological calculations using the Szekeres 
   * szekeres_fortran.f90 
   * SzekeresPy.py 
 - matplotlib (for plotting)
-- scipy (for plotting)
 - optional: astropy (for comparison and/or importing cosmological parameters) 
 - optional: healpy (for sky maps)
 
@@ -31,7 +33,8 @@ Open the file `sample.py` and follow the sample calculations and examples presen
 - Example 3: checking the properties of the Szekeres model at a given point (density, expansion rate, shear, Weyl)
 - Example 4: plotting a 1d radial profile (for a specific direction) of: density, expansion rate, shear, Weyl 
 - Example 5: comparing radial density profile for two different directions
-- Example 6: plotting a path of the light ray, t(R), featuring the apparent horizon (around R = 3000 Mpc)
+- Example 6: plotting a 2d density profile for a specific slice: x=const, or y=const, or z=const; (comoving domain only)
+- Example 7: plotting a path of the light ray, t(R), featuring the apparent horizon (around R ~ 3,000 Mpc - 5,000 Mpc)
 
 
 ## Development plans

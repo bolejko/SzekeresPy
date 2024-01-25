@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.20 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.21 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: sample.py
 # 
@@ -26,7 +26,7 @@ from SzekeresPy import SzekeresModel as szekeres_cosmo
 
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits import mplot3d
+
 
 
 
@@ -85,7 +85,6 @@ theta = 0.75*np.pi   # direction in which you want to see the 1d profile
 phi = np.pi          # direction in which you want to see the 1d profile
 
 radius, density,expansion,shear,weyl = szekeres_cosmo.fluid_1d(t,r,theta,phi,redshift)  
-plt.figure()
 plt.plot(radius,density,   radius,expansion,    radius,shear,    radius,weyl)
 plt.grid()
 plt.show()
@@ -102,7 +101,6 @@ theta1 = 0.05*np.pi   # direction in which you want to see the 1d profile
 radius1, density1, expansion1,shear1,weyl1 = szekeres_cosmo.fluid_1d(t,r,theta1,phi,redshift)
 theta2 = 0.75*np.pi   # direction in which you want to see the 1d profile
 radius2, density2, expansion2,shear2,weyl2 = szekeres_cosmo.fluid_1d(t,r,theta2,phi,redshift)
-plt.figure()
 plt.plot(radius1,density1,    radius2,density2)
 plt.grid()
 plt.show()
@@ -110,7 +108,44 @@ plt.show()
 
 
 #-------------------------------------------------------------
-#>>>> EXAMPLE 6: #light cone
+#>>>> EXAMPLE 6: #plotting a 2d map of fluid properties
+# in order to create a plot you need to specify a slice
+# either x_slice = const, or y_slice = const, or z_slice = const,
+#
+# The following will result in 3 figures: 2 density and 1 shear
+#
+# WORK IN PROGRESS, currently you can do the following
+# - only comoving domain available at this stage
+# - only redshift = 0
+#-------------------------------------------------------------
+X_plot, Y_plot, Z_plot =  szekeres_cosmo.fluid_2d(x = 5,figure="density")
+plt.figure()
+ax = plt.axes(projection='3d')
+ax.plot_surface(X_plot, Y_plot, Z_plot, cmap='cividis')
+plt.show(block =False)
+
+
+# we can update the dipole paramerter to make the anisotropy more prominent
+# WARNING: if the dipole parameter is too large then shell crossing occurs
+szekeres_cosmo.update(dipole = 0.6)
+X_plot, Y_plot, Z_plot =  szekeres_cosmo.fluid_2d(y = -2,figure="density")
+plt.figure()
+ax = plt.axes(projection='3d')
+ax.plot_surface(X_plot, Y_plot, Z_plot, cmap='cividis')
+plt.show(block =False)
+
+
+szekeres_cosmo.update(dipole = 0.1)
+X_plot, Y_plot, Z_plot =  szekeres_cosmo.fluid_2d(z = 8,figure="shear")
+plt.figure()
+ax = plt.axes(projection='3d')
+ax.plot_surface(X_plot, Y_plot, Z_plot, cmap='cividis')
+plt.show()
+
+
+
+#-------------------------------------------------------------
+#>>>> EXAMPLE 7: #light cone
 # to get a null cone you need to specify:
 #  (i) the position of the observer
 #  (ii) the direction

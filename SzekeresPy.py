@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.20 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.21 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: SzekeresPy.py
 # 
@@ -22,22 +22,23 @@
 
 
 import szekeres_fortran as fortran
-
 import numpy as np
-from scipy.interpolate import LinearNDInterpolator
+import math
+
 
 
 class Szekeres:
 
-    def __init__(self, cospar,szpar,cube_register):
+    def __init__(self, cospar,szpar):
         self.cospar = cospar
         self.szpar = szpar
-        self.cube_register = cube_register
-        self.box = 4
+        self.cube_register = np.zeros(10000)
+        self.update_counter = np.zeros(1)
+        self.box = 20
         self.side = self.box*2+1
         self.grid = (self.side)**3
         self.cube_data = np.zeros((4,self.grid))
-
+  
     def All(self): #returns all values      
         return self.cospar,self.szpar
 
@@ -62,42 +63,68 @@ class Szekeres:
         return Odez  #returns omega_lambda
 	
 
-    def update(self,H0 = None, Om0 = None, Ode0 = None):
+    def update(self,H0 = None, Om0 = None, Ode0 = None, dipole = None, silent = None):
+        update_done = False
+        if silent == None and not False:
+            silent = True
         if H0 == None:
-            print("H0 not updated")
+            pass
         else:
             self.cospar[0] = H0 
+            if not silent:
+                print("H0 updated to: ",H0)
+            update_done = True
         if Om0 == None:
-            print("Om0 not updated")
+            pass
         else:
             self.cospar[1] = Om0
+            if not silent:
+                print("Om0 updated to: ",Om0)
+            update_done = True
         if Ode0 == None:
-            print("Ode0 not updated")
+            pass
         else:
             self.cospar[2] = Ode0
-        
+            if not silent:
+                print("Ode0 updated to: ",Ode0)
+            update_done = True
+        if dipole == None:
+            pass
+        else:
+            if not silent:
+                print("dipole parameter updated to: ",dipole)
+            self.szpar[3] = dipole
+            update_done = True
+        if update_done:
+            self.update_counter[0] += 1
+        #print("Update counter :",self.update_counter[0])
+
 
     def cube_done(self,z):
         if z < 0:
             zi = 0
-        elif z>9.99:
-            zi = 9999
+        elif z>9.98:
+            zi = 9998
         else:
             zi = int(np.floor(z*100))    
         self.cube_register[zi] = 1.0 
+        self.cube_register[9999] = self.update_counter[0]
 
 
     def cube_check(self,z):
+        fortran_call_required = True
         if z < 0:
             zi = 0
-        elif z>9.99:
-            zi = 9999
+        elif z>9.98:
+            zi = 9998
         else:
             zi = int(np.floor(z*100))
         a = self.cube_register[zi] 
         if a:
-            print("CUBE exists and ready to use:",a)
-        return a
+            if self.cube_register[9999] == self.update_counter[0]:
+                print("CUBE exists and ready to use:",a)
+                fortran_call_required = False
+        return fortran_call_required
             
 
     def fluid(self,t,r,theta,phi,redshift):
@@ -132,18 +159,48 @@ class Szekeres:
         return radius,rho,tht,shr,wey
 
 
-    def fluid_2d(self, x=None, figure=None):
+    def fluid_2d(self, x=None, y=None, z = None, figure=None):
+        
+        if x != None or y != None or z != None:
+            if x != None:
+                s = x
+                cut = 1
+            if y !=None:
+                s = y
+                cut = 2
+            if z !=None:
+                s = z
+                cut = 3
+        else:
+            s = 0.0
+            cut = 1
+
+        r_range = float(4.0*self.szpar[1])
+
+        sf = float(s)
+        if sf >r_range:
+            sf = r_range
+        if sf<-r_range:
+            sf = -r_range
+        ic = int(math.floor(((sf/r_range)*self.box)) + self.box)
+
+
+        figure_flag = 0
         if figure == None:
             figure = "density"
-        else:
-            figure = "density"
-        if x==None:
-            x_slice = 0.0
-        else:
-            x_slice = 0.0
+        if figure == "density":
+            figure_flag = 0
+        if figure == "expansion":
+            figure_flag = 1
+        if figure == "shear":
+            figure_flag = 2
+        if figure == "weyl":
+            figure_flag = 3
+   
+        
         redshift = 0.0
         point = np.zeros(7)
-        point = 0.0,30.0,1,1,redshift,1,1
+        point = 0.0,r_range,1,1,redshift,1,1
         Ngrid = 100    
         input_data = Ngrid*np.ones(1)
         input_data = np.append(input_data,self.cospar)
@@ -154,44 +211,55 @@ class Szekeres:
         Y_plot = X_plot.copy().T
         Z_plot = np.outer(np.linspace(-1, 1, self.side), np.ones(self.side))
 
-        r_range = 4.0*self.szpar[1]
+
         X_plot = X_plot*r_range
         Y_plot = Y_plot*r_range 
 
-        if not self.cube_check(redshift):
-            rho,tht,shr,wey,ric,com,prp = fortran.link_cube(input_data)
-            self.cube_data[0] = rho
-            self.cube_data[1] = tht
-            self.cube_data[2] = shr
-            self.cube_data[3] = wey
-            self.cube_done(redshift)
+        #if self.cube_check(redshift):
+        rho,tht,shr,wey,ric,com,prp = fortran.link_cube(input_data)
+        self.cube_data[0] = rho
+        self.cube_data[1] = tht
+        self.cube_data[2] = shr
+        self.cube_data[3] = wey
+        self.cube_done(redshift)
         
-        ni = 1
-        nj = self.side
-        nk = self.side
-
-        for i in range(ni):
-            for j in range(nj):
-                for k in range(nk):
-
-                    pix=self.pixelTO(i,j,k)
-                    values = self.cube_data[0][pix]
-                    Z_plot[i][j] = values
-
         
+
+        for i_x in range(self.side):
+            for i_y in range(self.side):
+                if cut ==1:
+                    i = ic
+                    j = i_x
+                    k = i_y                 
+                if cut ==2:
+                    j = ic
+                    i = i_x
+                    k = i_y   
+                if cut ==3:
+                    k = ic
+                    i = i_x
+                    j = i_y   
+                pix=self.pixelTO(i,j,k)
+                Z_plot[i_x][i_y] = self.cube_data[figure_flag][pix]
+
+
         return X_plot, Y_plot, Z_plot
         
 
-    def pixelFROM(self,i):
+    def pixelFROM(self,i,r_range):
         pix = i
         z = int(pix / (self.side*self.side))
         pix = pix - (z * self.side * self.side)
         y = int(pix / self.side)
         x = int(pix % self.side)
-        return i,j,k
+
+        x = (x - self.box)*(r_range/self.box)
+        y = (y - self.box)*(r_range/self.box)
+        z = (z - self.box)*(r_range/self.box)
+        return x,y,z
    
     def pixelTO(self,i,j,k):
-        xshift = i   #+self.box
+        xshift = i   #self.box
         yshift = j   #+self.box
         zshift = k   #+self.box
         pix = xshift + self.side*(yshift + self.side*zshift)
@@ -245,7 +313,7 @@ class Szekeres:
 def initiate(astropy_cosmo=None, inhomog_cosmo=None):
   cospar = np.zeros(15)
   szpar = np.zeros(15)
-  cube_register = np.zeros(10000)
+
 
   background_dict = {
       "H0"   : 68.8,
@@ -314,7 +382,7 @@ def initiate(astropy_cosmo=None, inhomog_cosmo=None):
   print("    ")  
 # FIX needed: optimise for MCMC
 
-  sz_cosmo = Szekeres(cospar,szpar,cube_register)
+  sz_cosmo = Szekeres(cospar,szpar)
   
   return sz_cosmo         
 

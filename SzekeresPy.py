@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.21 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.22 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: SzekeresPy.py
 # 
@@ -207,13 +207,15 @@ class Szekeres:
         input_data = np.append(input_data,self.szpar)
         input_data = np.append(input_data,point)
 
-        X_plot = np.outer(np.linspace(-1, 1, self.side), np.ones(self.side))
-        Y_plot = X_plot.copy().T
-        Z_plot = np.outer(np.linspace(-1, 1, self.side), np.ones(self.side))
+        X_axis = np.outer(np.linspace(-1, 1, self.side), np.ones(self.side))
+        Y_axis = X_axis.copy().T
+        Z_rho = np.outer(np.linspace(-1, 1, self.side), np.ones(self.side))
+        Z_tht = np.outer(np.linspace(-1, 1, self.side), np.ones(self.side))
+        Z_shr = np.outer(np.linspace(-1, 1, self.side), np.ones(self.side))
+        Z_wey = np.outer(np.linspace(-1, 1, self.side), np.ones(self.side))
 
-
-        X_plot = X_plot*r_range
-        Y_plot = Y_plot*r_range 
+        X_axis = X_axis*r_range
+        Y_axis = Y_axis*r_range 
 
         #if self.cube_check(redshift):
         rho,tht,shr,wey,ric,com,prp = fortran.link_cube(input_data)
@@ -240,10 +242,12 @@ class Szekeres:
                     i = i_x
                     j = i_y   
                 pix=self.pixelTO(i,j,k)
-                Z_plot[i_x][i_y] = self.cube_data[figure_flag][pix]
+                Z_rho[i_x][i_y] = self.cube_data[0][pix]
+                Z_tht[i_x][i_y] = self.cube_data[1][pix]
+                Z_shr[i_x][i_y] = self.cube_data[2][pix]
+                Z_wey[i_x][i_y] = self.cube_data[3][pix]
 
-
-        return X_plot, Y_plot, Z_plot
+        return X_axis, Y_axis, Z_rho, Z_tht, Z_shr, Z_wey
         
 
     def pixelFROM(self,i,r_range):

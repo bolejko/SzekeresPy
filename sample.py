@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.21 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.22 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: sample.py
 # 
@@ -112,34 +112,34 @@ plt.show()
 # in order to create a plot you need to specify a slice
 # either x_slice = const, or y_slice = const, or z_slice = const,
 #
-# The following will result in 3 figures: 2 density and 1 shear
+# The following will create 3 figures: 2 density and 1 shear
 #
 # WORK IN PROGRESS, currently you can do the following
 # - only comoving domain available at this stage
 # - only redshift = 0
 #-------------------------------------------------------------
-X_plot, Y_plot, Z_plot =  szekeres_cosmo.fluid_2d(x = 5,figure="density")
+X_axis, Y_axis, Z_density, Z_expansion, Z_shear, Z_weyl =  szekeres_cosmo.fluid_2d(x = 5)
 plt.figure()
 ax = plt.axes(projection='3d')
-ax.plot_surface(X_plot, Y_plot, Z_plot, cmap='cividis')
+ax.plot_surface(X_axis, Y_axis, Z_density, cmap='cividis')
 plt.show(block =False)
 
 
 # we can update the dipole paramerter to make the anisotropy more prominent
 # WARNING: if the dipole parameter is too large then shell crossing occurs
 szekeres_cosmo.update(dipole = 0.6)
-X_plot, Y_plot, Z_plot =  szekeres_cosmo.fluid_2d(y = -2,figure="density")
+X_axis, Y_axis, Z_density, Z_expansion, Z_shear, Z_weyl =  szekeres_cosmo.fluid_2d(y = -2)
 plt.figure()
 ax = plt.axes(projection='3d')
-ax.plot_surface(X_plot, Y_plot, Z_plot, cmap='cividis')
+ax.plot_surface(X_axis, Y_axis, Z_density, cmap='cividis')
 plt.show(block =False)
 
 
 szekeres_cosmo.update(dipole = 0.1)
-X_plot, Y_plot, Z_plot =  szekeres_cosmo.fluid_2d(z = 8,figure="shear")
+X_axis, Y_axis, Z_density, Z_expansion, Z_shear, Z_weyl =  szekeres_cosmo.fluid_2d(z = 8)
 plt.figure()
 ax = plt.axes(projection='3d')
-ax.plot_surface(X_plot, Y_plot, Z_plot, cmap='cividis')
+ax.plot_surface(X_axis, Y_axis, Z_shear, cmap='cividis')
 plt.show()
 
 
@@ -159,7 +159,7 @@ DEC = -45.0
 
 observer = r, theta, phi
 direction = RA, DEC
-redshift = 4.40
+redshift = 4.4
 
 #creating a 1d the path of the light ray
 light_ray =  szekeres_cosmo.null_geodesic(observer,direction,redshift)  

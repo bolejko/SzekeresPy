@@ -21,8 +21,11 @@ The code is still in its early development. Debugging, optimisation, and restruc
 
 ## Installation 
 
-To compile the code, navigate to the folder with the above files and run the terminal commands listed either in the file `compile_single` or `compile_openmp` (for openMP). 
+To compile the code, navigate to the folder with the above files and run the terminal commands listed either in the file `compile_single` or `compile_openmp` (for openMP). The first step is to compile the fortran code and create a python module. For example, but typing:
 
+`python3 -m numpy.f2py -c --verbose --opt='-fopenmp -O3' -lgomp szekeres_fortran.f90 -m szekeres_fortran`
+
+you will compile the code (first "-c" in the line above) and create a python module (second "-m" in the command line above) which is then used by the SzekeresPy package. Then you can run the code from the terminal (by typing: `python3 sample.py`) or you can use an integrated development environment, such as for example IDLE.
 
 ## Running the code
 
@@ -34,7 +37,8 @@ Open the file `sample.py` and follow the sample calculations and examples presen
 - Example 4: plotting a 1d radial profile (for a specific direction) of: density, expansion rate, shear, Weyl 
 - Example 5: comparing radial density profile for two different directions
 - Example 6: plotting a 2d density profile for a specific slice: x=const, or y=const, or z=const; (comoving domain only)
-- Example 7: plotting a path of the light ray, t(R), featuring the apparent horizon (around R ~ 3,000 Mpc - 5,000 Mpc)
+- Example 7: plotting a path of the light ray, t(R), featuring the apparent horizon (depending on the parameters of the model, somewhere around R ~ 2,000 Mpc - 5,000 Mpc).
+
 
 
 ## Development plans

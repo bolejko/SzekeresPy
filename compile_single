@@ -1,8 +1,2 @@
-#in the terminal type the following two:
 rm *.so 
 python3 -m numpy.f2py -c --verbose --opt='-O3' szekeres_fortran.f90 -m szekeres_fortran
-#
-#in the alternative, make this file executable, type:
-#chmod u+x compile_single
-
-

@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.22 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.3 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: sample.py
 # 
@@ -38,7 +38,7 @@ redshift = 0.15
 H = szekeres_cosmo.H(redshift)
 Om = szekeres_cosmo.Om(redshift)
 Ode = szekeres_cosmo.Ode(redshift)
-print("FLRW background at redshft {:.2f}, H(z) = {:.2f}, Om(z) = {:.2f}, and Ol(z) = {:.2f}".format(redshift,H,Om,Ode))
+print("FLRW background at redshift {:.2f}, H(z) = {:.2f}, Om(z) = {:.2f}, and Ol(z) = {:.2f}".format(redshift,H,Om,Ode))
 
 #update the parameters (only present day paramaters can be updated)
 szekeres_cosmo.update(Ode0 = 0.68, Om0 = 0.32, H0 = 67.5)
@@ -48,7 +48,7 @@ redshift = 0.0
 H = szekeres_cosmo.H(redshift)
 Om = szekeres_cosmo.Om(redshift)
 Ode = szekeres_cosmo.Ode(redshift)
-print("FLRW background at redshft {:.2f}, H(z) = {:.2f}, Om(z) = {:.2f}, and Ol(z) = {:.2f}".format(redshift,H,Om,Ode))
+print("FLRW background at redshift {:.2f}, H(z) = {:.2f}, Om(z) = {:.2f}, and Ol(z) = {:.2f}".format(redshift,H,Om,Ode))
 
 
 
@@ -71,7 +71,7 @@ theta = 0.25*np.pi
 phi = np.pi
 redshift = 0.0
 density, expansion, shear, weyl  = szekeres_cosmo.fluid(t,r,theta,phi,redshift)  
-print("Relative to FLRW at redshft z= {:.2f}, density = {:.2f}, expansion rate = {:.2f}, shear = {:.2f}, Weyl = {:.2f}".format(redshift,density,expansion,shear,weyl))
+print("Relative to FLRW at redshift z= {:.2f}, density = {:.2f}, expansion rate = {:.2f}, shear = {:.2f}, Weyl = {:.2f}".format(redshift,density,expansion,shear,weyl))
 
 
 
@@ -121,7 +121,7 @@ plt.show()
 X_axis, Y_axis, Z_density, Z_expansion, Z_shear, Z_weyl =  szekeres_cosmo.fluid_2d(x = 5)
 plt.figure()
 ax = plt.axes(projection='3d')
-ax.plot_surface(X_axis, Y_axis, Z_density, cmap='cividis')
+ax.plot_surface(X_axis, Y_axis, Z_weyl, cmap='cividis')
 plt.show(block =False)
 
 
@@ -131,7 +131,7 @@ szekeres_cosmo.update(dipole = 0.6)
 X_axis, Y_axis, Z_density, Z_expansion, Z_shear, Z_weyl =  szekeres_cosmo.fluid_2d(y = -2)
 plt.figure()
 ax = plt.axes(projection='3d')
-ax.plot_surface(X_axis, Y_axis, Z_density, cmap='cividis')
+ax.plot_surface(X_axis, Y_axis, Z_weyl, cmap='cividis')
 plt.show(block =False)
 
 
@@ -149,7 +149,7 @@ plt.show()
 # to get a null cone you need to specify:
 #  (i) the position of the observer
 #  (ii) the direction
-#  (iii) the redshift 
+#  (iii) the redshift (can be a number, but for plotting an array is required)
 #-------------------------------------------------------------
 r =50.0 
 theta = 0.25*np.pi   
@@ -159,12 +159,71 @@ DEC = -45.0
 
 observer = r, theta, phi
 direction = RA, DEC
-redshift = 4.4
 
-#creating a 1d the path of the light ray
+redshift = np.linspace(0,4,500)
+
 light_ray =  szekeres_cosmo.null_geodesic(observer,direction,redshift)  
-plt.figure()
-plt.plot(light_ray[1,:],light_ray[0,:]) # plot of t(R): t in Gyr, R in Mpc
+try: #creating a 1d the path of the light ray, t(R) [t in Gyr, R in Mpc]
+    plt.figure()  
+    plt.plot(light_ray[1,:],light_ray[0,:]) # plot of t(R): 
+    plt.grid()
+    plt.show()
+except: #if redshift is a single number we print the position of the ray
+    light_ray_position = "\nThe ray's position at redshift {:.2f} is: t={:.2f}[Gyr], R={:.2f}[Mpc], theta={:.2f}, phi={:.2f}\n".format(redshift,*light_ray)
+    print(light_ray_position)
+
+
+
+#-------------------------------------------------------------
+#>>>> EXAMPLE 8: #angular diameter distance
+# to get the angular diameter distance you need to specify:
+#  (i) the position of the observer
+#  (ii) the direction
+#  (iii) the redshift (can be a number, but for plotting an array is required)
+#-------------------------------------------------------------r =50.0 
+theta = 0.25*np.pi   
+phi = 1.25*np.pi
+RA = 12.0
+DEC = -45.0 
+
+observer = r, theta, phi
+direction = RA, DEC
+
+z = np.linspace(0,2,150)
+
+#getting the angular diameter distance for the Szekeres model
+da =  szekeres_cosmo.angular_diameter_distance(observer,direction,z) 
+
+plt.figure()  
+plt.plot(z,da)
 plt.grid()
 plt.show()
-    
+
+
+
+#-------------------------------------------------------------
+#>>>> EXAMPLE 9: #luminosity distance
+# to get the angular diameter distance you need to specify:
+#  (i) the position of the observer
+#  (ii) the direction
+#  (iii) the redshift (can be a number, but for plotting an array is required)
+#-------------------------------------------------------------r =50.0 
+theta = 0.25*np.pi   
+phi = 1.25*np.pi
+RA = 12.0
+DEC = -45.0 
+
+observer = r, theta, phi
+direction = RA, DEC
+
+z = np.linspace(0,2,150)
+
+#getting the luminosity distance for the Szekeres model
+dl =  szekeres_cosmo.luminosity_distance(observer,direction,z) 
+
+plt.figure()  
+plt.plot(z,dl)
+plt.grid()
+plt.show()
+
+

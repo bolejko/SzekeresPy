@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.22 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.3 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: SzekeresPy.py
 # 
@@ -288,28 +288,115 @@ class Szekeres:
         else:
             grid = com
         return grid,rho,tht,shr,wey
-        
-        
-        
-    def null_geodesic(self,obs,dir,red):
+
+
+    def angular_diameter_distance(self,obs,dir,red):
+        return_array = True
+        if type(red) is np.ndarray:
+            Ngrid = red.size    
+            z = red[-1]
+            redshift = red
+            light_ray = np.zeros((5,Ngrid)) 
+        else:
+            Ngrid = 100   
+            z = red
+            redshift = np.linspace(0,z,Ngrid)
+            light_ray = np.zeros((5)) 
+            return_array = False
         point = np.zeros(7)
-        point = 0.0,obs[0],obs[1],obs[2],red,1,1
+        point = 0.0,obs[0],obs[1],obs[2],z,1,1
         direction = np.zeros(7)
         direction = dir[0],dir[1],1,1,1,1,1
-        Ngrid = 200   
+
         input_data = Ngrid*np.ones(1)
+        input_data = np.append(input_data,redshift)
         input_data = np.append(input_data,self.cospar)
         input_data = np.append(input_data,self.szpar)
         input_data = np.append(input_data,point)
         input_data = np.append(input_data,direction)
-        light_ray = np.zeros((6,Ngrid)) 
-        tempral_position, radial_position, theta_position, phi_position,  testal , redshift_position = fortran.link_null(input_data)
-        light_ray[0,:] = tempral_position
-        light_ray[1,:] = radial_position
-        light_ray[2,:] = theta_position    
-        light_ray[3,:] = phi_position
-        light_ray[4,:] = testal
-        light_ray[5,:] = redshift_position      
+        ND= input_data.size
+        distance  = fortran.link_distance(ND,input_data)
+        if return_array: 
+            angular_distance = distance
+        else:
+            angular_distance = distance[-1]
+        return angular_distance
+
+        
+    def luminosity_distance(self,obs,dir,red):
+        return_array = True
+        if type(red) is np.ndarray:
+            Ngrid = red.size    
+            z = red[-1]
+            redshift = red
+            light_ray = np.zeros((5,Ngrid)) 
+        else:
+            Ngrid = 100   
+            z = red
+            redshift = np.linspace(0,z,Ngrid)
+            light_ray = np.zeros((5)) 
+            return_array = False
+        point = np.zeros(7)
+        point = 0.0,obs[0],obs[1],obs[2],z,1,1
+        direction = np.zeros(7)
+        direction = dir[0],dir[1],1,1,1,1,1
+
+        input_data = Ngrid*np.ones(1)
+        input_data = np.append(input_data,redshift)
+        input_data = np.append(input_data,self.cospar)
+        input_data = np.append(input_data,self.szpar)
+        input_data = np.append(input_data,point)
+        input_data = np.append(input_data,direction)
+        ND= input_data.size
+        distance  = fortran.link_distance(ND,input_data)
+        if return_array: 
+            luminosity_distance = distance*(1+redshift)**2
+        else:
+            angular_distance = distance[-1]*(1+z)**2
+        return luminosity_distance
+
+
+    def null_geodesic(self,obs,dir,red):
+        return_array = True
+        if type(red) is np.ndarray:
+            Ngrid = red.size    
+            z = red[-1]
+            redshift = red
+            light_ray = np.zeros((5,Ngrid)) 
+        else:
+            Ngrid = 100   
+            z = red
+            redshift = np.linspace(0,z,Ngrid)
+            light_ray = np.zeros((5)) 
+            return_array = False
+
+        point = np.zeros(7)
+        point = 0.0,obs[0],obs[1],obs[2],z,1,1
+        direction = np.zeros(7)
+        direction = dir[0],dir[1],1,1,1,1,1
+
+
+
+        input_data = Ngrid*np.ones(1)
+        input_data = np.append(input_data,redshift)
+        input_data = np.append(input_data,self.cospar)
+        input_data = np.append(input_data,self.szpar)
+        input_data = np.append(input_data,point)
+        input_data = np.append(input_data,direction)
+        ND= input_data.size
+        tempral_position, radial_position, theta_position, phi_position,  extral  = fortran.link_null(ND,input_data)
+        if return_array: 
+            light_ray[0,:] = tempral_position
+            light_ray[1,:] = radial_position
+            light_ray[2,:] = theta_position    
+            light_ray[3,:] = phi_position
+            light_ray[4,:] = extral
+        else:
+            light_ray[0] = tempral_position[-1]
+            light_ray[1] = radial_position[-1]
+            light_ray[2] = theta_position[-1]
+            light_ray[3] = phi_position[-1]
+            light_ray[4] = extral[-1]
         return light_ray
                
 

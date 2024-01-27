@@ -1,5 +1,5 @@
 !########################################################################################################
-! SzekeresPy ver. 0.22 - Python package for cosmological calculations using the Szekeres Cosmological Model
+! SzekeresPy ver. 0.3 - Python package for cosmological calculations using the Szekeres Cosmological Model
 ! 
 ! File: szekeres_fortran.f90
 ! 
@@ -27,14 +27,15 @@ implicit none
     integer, parameter :: npoint = 7
     double precision, allocatable :: pypac(:)
     double precision, allocatable :: pyszek(:)    
-    double precision, dimension (npoint) :: szpoint,szdirection  
+    double precision, dimension (npoint) :: szpoint 
+  !  double precision, dimension (npoint) :: szdirection  
     double precision, dimension (100) :: szpac  
     character(len=8), dimension(100) :: szpan
     double precision,  dimension (10) :: fluid
     double precision :: redshift,time
     double precision, parameter :: pi = 4.0d0*datan(1.0d0)
     integer, parameter :: ngrid = 100
-    double precision, dimension (0:(ngrid-1)) :: temporal, radial, thetal, phial,testal,redshiftal
+   ! double precision, dimension (0:(ngrid-1)) :: temporal, radial, thetal, phial,extral,redshiftal
     logical :: print_names = .True.
 
    npypac = 15
@@ -70,17 +71,7 @@ implicit none
    enddo
 
     ! testing null geodesics 
-    szdirection = 0.0
-    szdirection(1) = 0.1
-    szdirection(2) = 0.1
-    szpoint(1) = 0.0 
-    szpoint(2) = 30.0
-    szpoint(3) = 0.05*pi
-    szpoint(4) = pi 
-    szpoint(5) = 0.2
-    call null_geodesic(szpac,ngrid,npoint,szpoint,szdirection,temporal,radial,thetal,phial,testal,redshiftal)
-    
-    
+   
 
 end program szekeres_fortran
 
@@ -307,46 +298,250 @@ subroutine link_cube(input_data,rho,tht,shr,wey,ric,com,prp)
 end subroutine link_cube
 
 !------------------------------------
-subroutine link_null(input_data, temporal, radial, thetal, phial,testal,redshiftal)
+subroutine link_null(INTERFACE_FIX_REQUIRED,ND,input_data,temporal,radial,thetal,phial,extral)
     implicit none
-    double precision, dimension(0:44), intent(in) :: input_data
+    integer :: INTERFACE_FIX_REQUIRED
+    integer, intent(in) :: ND
+    double precision, dimension(0:ND-1), intent(in) :: input_data
+    double precision, dimension (0:ND-45-1), intent(out) :: temporal, radial, thetal, phial,extral
+    double precision, dimension(0:ND-45-1)  :: redshiftal
     integer, parameter :: npypac = 15
     integer, parameter :: npyszek = 15
     integer, parameter :: npoint = 7
-    integer, parameter :: ngrid = 200
-    integer :: ngrid000
+    integer :: ngrid,N1,N2
     double precision, dimension(npypac)  :: pypac 
     double precision, dimension(npyszek) :: pyszek   
     double precision, dimension(npoint)  :: point,direction
+
     double precision, dimension (100) :: szpac  
-    double precision, dimension (0:(ngrid-1)), intent(out) :: temporal, radial, thetal, phial,testal,redshiftal
-
+    INTERFACE_FIX_REQUIRED = 1 
     szpac(100) = 2
-
-    ngrid000 = int(input_data(0))
-    pypac(1:15)  =  input_data(1:15)
-    pyszek(1:15) =  input_data(16:30)
-    point(1:7)  =  input_data(31:37)
-    direction(1:7)  =  input_data(38:44)
-
+    ngrid = int(input_data(0))
+    if(ngrid.ne.(ND-45)) then
+        print *, "Number of data: Python->Fortran error"
+        stop
+    endif
+    N1 = 1;  N2 = ND-45
+    redshiftal = input_data(N1:N2)
+    N1 = N2+1;  N2 = N1+15-1
+    pypac(1:15) =  input_data(N1:N2)
+    N1 = N2+1; N2 = N1+15-1
+    pyszek(1:15) =  input_data(N1:N2)
+    N1 = N2+1; N2 = N1+7-1
+    point(1:7) =  input_data(N1:N2)
+    N1 = N2+1; N2 = N1+7-1
+    direction(1:7)  =  input_data(N1:N2)
 
     call parameter_values(npypac,pypac,npyszek,pyszek,szpac)
     call age_from_initial(szpac)
-    call null_geodesic(szpac,ngrid,npoint,point,direction,temporal,radial,thetal,phial,testal,redshiftal)
+    call null_geodesic(szpac,npoint,point,direction,ngrid,redshiftal,temporal,radial,thetal,phial,extral)
     
 end subroutine link_null
 
 !------------------------------------
-subroutine null_geodesic(szpac,ngrid,npoint,point,direction,temporal,radial,thetal,phial,testal,redshiftal)
+subroutine link_distance(INTERFACE_FIX_REQUIRED,ND,input_data,distance)
+    implicit none
+    integer :: INTERFACE_FIX_REQUIRED
+    integer, intent(in) :: ND
+    double precision, dimension(0:ND-1), intent(in) :: input_data
+    double precision, dimension (0:ND-45-1), intent(out) :: distance
+    double precision, dimension(0:ND-45-1)  :: redshiftal
+    integer, parameter :: npypac = 15
+    integer, parameter :: npyszek = 15
+    integer, parameter :: npoint = 7
+    integer :: ngrid,N1,N2
+    double precision, dimension(npypac)  :: pypac 
+    double precision, dimension(npyszek) :: pyszek   
+    double precision, dimension(npoint)  :: point,direction
+
+    double precision, dimension (100) :: szpac  
+    INTERFACE_FIX_REQUIRED = 1 
+    szpac(100) = 2
+
+    ngrid = int(input_data(0))
+    if(ngrid.ne.(ND-45)) then
+        print *, "Number of data: Python->Fortran error"
+        stop
+    endif
+    N1 = 1;  N2 = ND-45
+    redshiftal = input_data(N1:N2)
+    N1 = N2+1;  N2 = N1+15-1
+    pypac(1:15) =  input_data(N1:N2)
+    N1 = N2+1; N2 = N1+15-1
+    pyszek(1:15) =  input_data(N1:N2)
+    N1 = N2+1; N2 = N1+7-1
+    point(1:7) =  input_data(N1:N2)
+    N1 = N2+1; N2 = N1+7-1
+    direction(1:7)  =  input_data(N1:N2)
+
+    call parameter_values(npypac,pypac,npyszek,pyszek,szpac)
+    call age_from_initial(szpac)
+    call angular_distance(szpac,npoint,point,direction,ngrid,redshiftal,distance)
+    
+end subroutine link_distance
+
+!------------------------------------
+
+subroutine angular_distance(szpac,npoint,point,direction,ngrid,redshiftal,distance)
     implicit none
     double precision,  dimension (100) :: szpac  
     integer, intent(in) :: ngrid, npoint
-    double precision, dimension (npoint) :: point, direction    
-    double precision, dimension (0:(ngrid-1)), intent(out) :: temporal, radial, thetal, phial, testal, redshiftal
+    double precision, dimension(npoint) :: point, direction    
+    double precision, dimension(0:(ngrid-1)), intent(in) :: redshiftal
+    double precision, dimension(0:(ngrid-1)), intent(out) :: distance
+    double precision, dimension(0:3)   :: PV,PVi,PVii,NV,NVi,NVii,AV
+    double precision, dimension(4,0:3) :: PRK,NRK
+    double precision, dimension(4) :: DRK,VRK
+    integer :: Ui,I,J,iz
+    double precision,dimension(0:5) :: yp,yp1,yp2,yp3
+    double precision,dimension(4:5) :: D,Di,Dii
+    double precision :: DA,DAi,VDA,VDAi,ADA
+    double precision :: xp,xp1,xp2,xp3
+    double precision :: ds,dss,z
+    double precision :: redshift,null_test,f16
+
+
+    redshift = point(5) 
+
+
+    f16 = 1.0d0/6.0d0
+    iz = 0
+    Ui = 100000
+    dss = 150.d0
+    ds = dss
+! FIX needed: adaptive step
+
+    call initial_conditions(szpac,npoint,point,direction,PV,NV)
+
+    DA=0d0
+    VDA=1d0
+    ADA=0d0
+
+
+    D(4) = szpac(81)*1d-3; D(5) = 0.0d0
+
+    DAi = DA; VDAi = VDA 
+    Di = D; Dii = D
+    PVi=PV; PVii=PV
+    NVi=NV; NVii=NV
+    PRK = 0.0d0; NRK = 0.0d0
+    DRK = 0.0d0; VRK = 0.0d0; 
+
+    do I=1,Ui
+
+        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        do J=0,3
+        PRK(1,J) = NV(J)*ds
+        NRK(1,J) = AV(J)*ds
+        PV(J) = PVi(J) + 0.5*PRK(1,J)
+        NV(J) = NVi(J) + 0.5*NRK(1,J)
+        enddo
+        VRK(1) = ADA*ds
+        DRK(1) = VDA*ds
+        VDA = VDAi+0.5d0*VRK(1)
+        DA  = DAi +0.5d0*DRK(1)
+
+
+        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        do J=0,3
+        PRK(2,J) = NV(J)*ds
+        NRK(2,J) = AV(J)*ds
+        PV(J) = PVi(J) + 0.5*PRK(2,J)
+        NV(J) = NVi(J) + 0.5*NRK(2,J)
+        enddo
+        VRK(2) = ADA*ds
+        DRK(2) = VDA*ds
+        VDA = VDAi+0.5d0*VRK(2)
+        DA  = DAi +0.5d0*DRK(2)
+
+  
+
+        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        do J=0,3
+        PRK(3,J) = NV(J)*ds
+        NRK(3,J) = AV(J)*ds
+        PV(J) = PVi(J) + PRK(3,J)
+        NV(J) = NVi(J) + NRK(3,J)
+        enddo
+        VRK(3) = ADA*ds
+        DRK(3) = VDA*ds
+        VDA = VDAi + VRK(3)
+        DA  = DAi  + DRK(3)
+
+     
+
+        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        do J=0,3
+        PRK(4,J) = NV(J)*ds
+        NRK(4,J) = AV(J)*ds
+        PV(J) = PVi(J) + f16*(PRK(1,J) + 2.0d0*(PRK(2,J) + PRK(3,J)) + PRK(4,J))
+        NV(J) = NVi(J) + f16*(NRK(1,J) + 2.0d0*(NRK(2,J) + NRK(3,J)) + NRK(4,J))
+        enddo
+        VRK(4) = ADA*ds
+        DRK(4) = VDA*ds
+        VDA = VDAi + f16*(VRK(1)+2.0d0*(VRK(2) + VRK(3))+VRK(4))
+        DA  = DAi  + f16*(DRK(1)+2.0d0*(DRK(2) + DRK(3))+DRK(4))
+
+   
+! FIX needed: adjust the step to the grid
+    call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+    D(4) = szpac(81)*1d-3
+    D(5) = DA
+
+    z = abs(NV(0)) - 1.0
+        if (z > redshiftal(iz) .and. I>1) then
+            yp1(0:3) = PVii; yp1(4:5) = Dii(4:5)
+            yp2(0:3) = PVi; yp2(4:5) = Di(4:5)
+            yp3(0:3) = PV; yp3(4:5) = D(4:5)
+
+            yp = 0.0d0
+            xp1 = dabs(NVii(0)) - 1.0d0
+            xp2 = dabs(NVi(0)) - 1.0d0
+            xp3 = dabs(NV(0)) - 1.0d0
+            xp = redshiftal(iz)
+            yp = yp + yp1*((xp - xp2)/(xp1-xp2))*((xp - xp3)/(xp1-xp3))
+            yp = yp + yp2*((xp - xp1)/(xp2-xp1))*((xp - xp3)/(xp2-xp3))
+            yp = yp + yp3*((xp - xp1)/(xp3-xp1))*((xp - xp2)/(xp3-xp2))
+         !   temporal(iz) = yp(0)*szpac(25)*1d-3
+         !   radial(iz)   = yp(4)  ! alternativel use: yp(1)  
+         !   phial(iz)    = yp(2)
+         !   thetal(iz)   = yp(3)
+         !   extral(iz) = null_test
+            distance(iz) = yp(5) * 1d-3
+            iz=iz+1
+            if(iz == ngrid) exit
+        endif
+
+        PVii = PVi
+        PVi  = PV
+        NVii = NVi
+        NVi  = NV
+        Dii = Di
+        Di = D
+
+        VDAi    = VDA
+        DAi     = DA
+
+  
+    enddo
+
+end subroutine angular_distance
+!------------------------------------
+
+
+subroutine null_geodesic(szpac,npoint,point,direction,ngrid,redshiftal,temporal,radial,thetal,phial,extral)
+    implicit none
+    double precision,  dimension (100) :: szpac  
+    integer, intent(in) :: ngrid, npoint
+    double precision, dimension(npoint) :: point, direction    
+    double precision, dimension(0:(ngrid-1)), intent(in) :: redshiftal
+    double precision, dimension(0:(ngrid-1)), intent(out) :: temporal, radial, thetal, phial, extral
     double precision, dimension(0:3)   :: PV,PVi,PVii,NV,NVi,NVii,AV
     double precision, dimension(4,0:3) :: PRK,NRK
     integer :: Ui,I,J,iz
-    double precision,dimension(0:3) :: yp,yp1,yp2,yp3
+    double precision,dimension(0:5) :: yp,yp1,yp2,yp3
+    double precision,dimension(4:5) :: D,Di,Dii
+    double precision :: DA,ADA
     double precision :: xp,xp1,xp2,xp3
     double precision :: ds,dss,z
     double precision :: redshift,ngz,null_test,f16
@@ -354,29 +549,28 @@ subroutine null_geodesic(szpac,ngrid,npoint,point,direction,temporal,radial,thet
 
     redshift = point(5) 
     ngz = redshift/(ngrid*1.0d0 - 1.0d0)
-    do iz = 0,ngrid-1
-        redshiftal(iz) = iz*ngz
-    enddo
+ !   do iz = 0,ngrid-1
+ !       redshiftal(iz) = iz*ngz
+ !   enddo
 
     f16 = 1.0d0/6.0d0
     iz = 0
     Ui = 100000
-    dss = 50.d0
+    dss = 100.d0
     ds = dss
 ! FIX needed: adaptive step
 
     call initial_conditions(szpac,npoint,point,direction,PV,NV)
-
-    PVi=PV
-    NVi=NV
-    PVii=PV
-    NVii=NV
+    D(4) = szpac(81)*1d-3
+    Di = D; Dii = D
+    PVi=PV; PVii=PV
+    NVi=NV; NVii=NV
     PRK = 0.0d0
     NRK = 0.0d0
 
     do I=1,Ui
 
-        call light_propagation(szpac,PV,NV,AV,null_test)
+        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
         do J=0,3
         PRK(1,J) = NV(J)*ds
         NRK(1,J) = AV(J)*ds
@@ -384,7 +578,7 @@ subroutine null_geodesic(szpac,ngrid,npoint,point,direction,temporal,radial,thet
         NV(J) = NVi(J) + 0.5*NRK(1,J)
         enddo
 
-        call light_propagation(szpac,PV,NV,AV,null_test)
+        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
         do J=0,3
         PRK(2,J) = NV(J)*ds
         NRK(2,J) = AV(J)*ds
@@ -392,7 +586,7 @@ subroutine null_geodesic(szpac,ngrid,npoint,point,direction,temporal,radial,thet
         NV(J) = NVi(J) + 0.5*NRK(2,J)
         enddo
 
-        call light_propagation(szpac,PV,NV,AV,null_test)
+        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
         do J=0,3
         PRK(3,J) = NV(J)*ds
         NRK(3,J) = AV(J)*ds
@@ -400,7 +594,7 @@ subroutine null_geodesic(szpac,ngrid,npoint,point,direction,temporal,radial,thet
         NV(J) = NVi(J) + NRK(3,J)
         enddo
 
-        call light_propagation(szpac,PV,NV,AV,null_test)
+        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
         do J=0,3
         PRK(4,J) = NV(J)*ds
         NRK(4,J) = AV(J)*ds
@@ -410,12 +604,15 @@ subroutine null_geodesic(szpac,ngrid,npoint,point,direction,temporal,radial,thet
 
 
 ! FIX needed: adjust the step to the grid
-    call light_propagation(szpac,PV,NV,AV,null_test)
+    call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+    D(4) = szpac(81)*1d-3
+
     z = abs(NV(0)) - 1.0
         if (z > redshiftal(iz) .and. I>1) then
-            yp1 = PVii
-            yp2 = PVi
-            yp3 = PV
+            yp1(0:3) = PVii; yp1(4:5) = Dii(4:5)
+            yp2(0:3) = PVi; yp2(4:5) = Di(4:5)
+            yp3(0:3) = PV; yp3(4:5) = D(4:5)
+
             yp = 0.0d0
             xp1 = dabs(NVii(0)) - 1.0d0
             xp2 = dabs(NVi(0)) - 1.0d0
@@ -425,10 +622,10 @@ subroutine null_geodesic(szpac,ngrid,npoint,point,direction,temporal,radial,thet
             yp = yp + yp2*((xp - xp1)/(xp2-xp1))*((xp - xp3)/(xp2-xp3))
             yp = yp + yp3*((xp - xp1)/(xp3-xp1))*((xp - xp2)/(xp3-xp2))
             temporal(iz) = yp(0)*szpac(25)*1d-3
-            radial(iz)   = szpac(81)*1d-3
+            radial(iz)   = yp(4)  ! alternativel use: yp(1)  
             phial(iz)    = yp(2)
             thetal(iz)   = yp(3)
-            testal(iz) = null_test
+            extral(iz) = null_test
             iz=iz+1
             if(iz == ngrid) exit
         endif
@@ -437,13 +634,14 @@ subroutine null_geodesic(szpac,ngrid,npoint,point,direction,temporal,radial,thet
         PVi  = PV
         NVii = NVi
         NVi  = NV
-
+        Dii = Di
+        Di = D
 
     enddo
 
 end subroutine null_geodesic
 !------------------------------------
-subroutine light_propagation(szpac,PV,NV,AV,null_test)
+subroutine light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
     implicit none
     double precision,  intent(inout), dimension (100) :: szpac 
     double precision, dimension(0:3), intent(in) :: PV,NV
@@ -451,6 +649,7 @@ subroutine light_propagation(szpac,PV,NV,AV,null_test)
     double precision, dimension(0:3,0:3)   :: GIJ
     double precision, dimension(0:3,0:3,0:3) :: GAM
     integer :: G,I,J
+    double precision :: DA,ADA
     double precision, intent(out) :: null_test
 
     call christoffels2(szpac,PV,GIJ,GAM)
@@ -472,6 +671,12 @@ subroutine light_propagation(szpac,PV,NV,AV,null_test)
         enddo
     enddo   
 
+    
+  
+    ADA = -5d-1*szpac(87)*(NV(0)*NV(0))*DA
+  
+  
+   ! ADA = -5d-1*szpac(22)*DA
   
 end subroutine light_propagation
 !------------------------------------
@@ -648,6 +853,10 @@ subroutine christoffels2(szpac,PV,GIJ,GAM)
     mnss = mns*s  
     mns2 = mns*mns
   
+
+    szpac(87) = 2.0d0*(mr-3.0d0*m*nsc*si)*aRi*aRi/(aRr - aR*nsc*si)
+    
+
     g11_part_1 = -mki*(  (aRr + rs1*(sr*cth + n*sth) )**2    )
     g11_part_2 =  -rs2*( (sr*sth + n*mcth)**2 + (nd*mcth)**2  )
 
@@ -806,6 +1015,7 @@ subroutine fluid_variables(szpac,npoint,point,fluid)
     sr   = szpac(74) 
     srr  = szpac(75) 
 
+
     redshift = point(5)
     zz2 = (1.0 + redshift)**2
     zz3 = (1.0 + redshift)**3
@@ -869,7 +1079,7 @@ end subroutine fluid_variables
 !--------------------------------------------------
 
 subroutine areal_radius(szpac,npoint,point,aR,aRt, aRr, aRrr, aRtr, aRtrr)
-! calulates areal distace R and its derivatives  
+! calulates areal distance R and its derivatives  
 ! areal distance at time t: aR
 ! time derivatice areal distance at time t: aRt
 ! first radial derivatice areal distance at time t: aRr
@@ -1258,6 +1468,8 @@ subroutine areal_evolution(szpac,PV)
     szpac(86) = aRtrr
 
 
+
+
 end subroutine areal_evolution
 !--------------------------------------------------
 
@@ -1444,6 +1656,8 @@ subroutine szekeres_specifics(szpac,r)
        sr = alpha*(r**(alpha-1.0))
        srr = alpha*(alpha-1.0)*(r**(alpha-2.0))
     endif
+
+
 
     szpac(60) = r
     szpac(61) = m

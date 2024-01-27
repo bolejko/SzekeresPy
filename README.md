@@ -38,14 +38,14 @@ Open the file `sample.py` and follow the sample calculations and examples presen
 - Example 5: comparing radial density profile for two different directions
 - Example 6: plotting a 2d density profile for a specific slice: x=const, or y=const, or z=const; (comoving domain only)
 - Example 7: plotting a path of the light ray, t(R), featuring the apparent horizon (depending on the parameters of the model, somewhere around R ~ 2,000 Mpc - 5,000 Mpc).
-
-
+- Example 8: plotting the angular diameter distance
+- Example 9: plotting the luminosity distance
 
 ## Development plans
 
 - ~~ver 0.1: evolution of a model~~
 - ~~ver 0.2: light propagation~~
-- ver 0.3: distance-redshift relation
+- ~~ver 0.3: distance-redshift relation~~
 - ver 0.4: ray-tracing and sky maps 
 - ver 0.5: volume average with a variable position of the observer and radius of the averaging domain
 

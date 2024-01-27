@@ -1,6 +1,2 @@
-#in the terminal type the following two commends 
 rm *.so 
 python3 -m numpy.f2py -c --verbose --opt='-fopenmp -O3' -lgomp szekeres_fortran.f90 -m szekeres_fortran
-#
-#in the alternative, make this file executable: chmod u+x compile_openmp
-

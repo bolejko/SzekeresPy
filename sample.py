@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.3 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.32 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: sample.py
 # 
@@ -26,7 +26,7 @@ from SzekeresPy import SzekeresModel as szekeres_cosmo
 
 import numpy as np
 import matplotlib.pyplot as plt
-
+import healpy as hp
 
 
 
@@ -121,8 +121,8 @@ plt.show()
 X_axis, Y_axis, Z_density, Z_expansion, Z_shear, Z_weyl =  szekeres_cosmo.fluid_2d(x = 5)
 plt.figure()
 ax = plt.axes(projection='3d')
-ax.plot_surface(X_axis, Y_axis, Z_weyl, cmap='cividis')
-plt.show(block =False)
+ax.plot_surface(X_axis, Y_axis, Z_density, cmap='cividis')
+plt.show()
 
 
 # we can update the dipole paramerter to make the anisotropy more prominent
@@ -132,7 +132,7 @@ X_axis, Y_axis, Z_density, Z_expansion, Z_shear, Z_weyl =  szekeres_cosmo.fluid_
 plt.figure()
 ax = plt.axes(projection='3d')
 ax.plot_surface(X_axis, Y_axis, Z_weyl, cmap='cividis')
-plt.show(block =False)
+plt.show()
 
 
 szekeres_cosmo.update(dipole = 0.1)
@@ -154,18 +154,20 @@ plt.show()
 r =50.0 
 theta = 0.25*np.pi   
 phi = 1.25*np.pi
-RA = 12.0
-DEC = -45.0 
+RA = 94.0
+DEC = -20.0 
 
 observer = r, theta, phi
 direction = RA, DEC
-
-redshift = np.linspace(0,4,500)
+szekeres_cosmo.update(dipole = 0.5)
+redshift = np.linspace(0,4.4,500)
 
 light_ray =  szekeres_cosmo.null_geodesic(observer,direction,redshift)  
 try: #creating a 1d the path of the light ray, t(R) [t in Gyr, R in Mpc]
     plt.figure()  
     plt.plot(light_ray[1,:],light_ray[0,:]) # plot of t(R): 
+    plt.xlabel('R [Mpc]')
+    plt.ylabel('$t_0 - t(R)$')
     plt.grid()
     plt.show()
 except: #if redshift is a single number we print the position of the ray
@@ -183,8 +185,8 @@ except: #if redshift is a single number we print the position of the ray
 #-------------------------------------------------------------r =50.0 
 theta = 0.25*np.pi   
 phi = 1.25*np.pi
-RA = 12.0
-DEC = -45.0 
+RA = 10.0
+DEC = 45.0 
 
 observer = r, theta, phi
 direction = RA, DEC
@@ -197,6 +199,8 @@ da =  szekeres_cosmo.angular_diameter_distance(observer,direction,z)
 plt.figure()  
 plt.plot(z,da)
 plt.grid()
+plt.xlabel('z ')
+plt.ylabel('$D_A$ [Mpc]')
 plt.show()
 
 
@@ -207,7 +211,8 @@ plt.show()
 #  (i) the position of the observer
 #  (ii) the direction
 #  (iii) the redshift (can be a number, but for plotting an array is required)
-#-------------------------------------------------------------r =50.0 
+#-------------------------------------------------------------
+r =20.0 
 theta = 0.25*np.pi   
 phi = 1.25*np.pi
 RA = 12.0
@@ -224,6 +229,28 @@ dl =  szekeres_cosmo.luminosity_distance(observer,direction,z)
 plt.figure()  
 plt.plot(z,dl)
 plt.grid()
+plt.xlabel('z ')
+plt.ylabel('$D_L$ [Mpc]')
 plt.show()
 
 
+
+#-------------------------------------------------------------
+#>>>> EXAMPLE 10: #sky maps
+#
+# this example can take a few minutes to complete
+# if you want to run it, change the flag to True
+
+run_example_10 = True
+
+r =15.0 
+theta = 0.25*np.pi   
+phi = 1.25*np.pi
+observer = r, theta, phi
+
+if run_example_10:
+    healpy_map =  szekeres_cosmo.sky_map(observer) 
+    hp.mollview(healpy_map,title="CMB sky in the Szekeres model")
+    plt.show()
+
+  

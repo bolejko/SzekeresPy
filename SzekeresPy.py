@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.3 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.32 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: SzekeresPy.py
 # 
@@ -23,6 +23,7 @@
 
 import szekeres_fortran as fortran
 import numpy as np
+import healpy as hp
 import math
 
 
@@ -34,7 +35,7 @@ class Szekeres:
         self.szpar = szpar
         self.cube_register = np.zeros(10000)
         self.update_counter = np.zeros(1)
-        self.box = 20
+        self.box = 32
         self.side = self.box*2+1
         self.grid = (self.side)**3
         self.cube_data = np.zeros((4,self.grid))
@@ -95,8 +96,12 @@ class Szekeres:
                 print("dipole parameter updated to: ",dipole)
             self.szpar[3] = dipole
             update_done = True
+
+
+
         if update_done:
             self.update_counter[0] += 1
+
         #print("Update counter :",self.update_counter[0])
 
 
@@ -176,14 +181,12 @@ class Szekeres:
             cut = 1
 
         r_range = float(4.0*self.szpar[1])
-
         sf = float(s)
         if sf >r_range:
             sf = r_range
         if sf<-r_range:
             sf = -r_range
         ic = int(math.floor(((sf/r_range)*self.box)) + self.box)
-
 
         figure_flag = 0
         if figure == None:
@@ -399,8 +402,37 @@ class Szekeres:
             light_ray[4] = extral[-1]
         return light_ray
                
+    def sky_map(self,obs):
+        NSIDE = 8
+        NPIX = hp.nside2npix(NSIDE)
+        m = np.arange(NPIX)
+        # >> directions should be provided as:
+        #   - [RA], [DEC] arrays (in degrees) 
+        #   - healy pixel array: NSIDE, [ipix] (RING order, i.e. healpy's default ordering)
+        # >> allow for partial sky coverage:
+        RA,DEC = hp.pix2ang(NSIDE,m,lonlat=True)
 
-               
+        point = np.zeros(7)
+        point = 0.0,obs[0],obs[1],obs[2],1,1,1
+        direction = np.ones(7)
+
+
+        input_data = NPIX*np.ones(1)
+        input_data = np.append(input_data,RA)
+        input_data = np.append(input_data,DEC)        
+        input_data = np.append(input_data,self.cospar)
+        input_data = np.append(input_data,self.szpar)
+        input_data = np.append(input_data,point)
+        input_data = np.append(input_data,direction)
+        ND= input_data.size
+
+        szekeres_map, rmax,dmax = fortran.link_temperature(ND,input_data)
+
+        temperature_map  = szekeres_map
+
+
+        return temperature_map      
+
 def initiate(astropy_cosmo=None, inhomog_cosmo=None):
   cospar = np.zeros(15)
   szpar = np.zeros(15)
@@ -453,7 +485,12 @@ def initiate(astropy_cosmo=None, inhomog_cosmo=None):
       szpar[2] = perturbation_dict["slope"]
       szpar[3] = perturbation_dict["dipole"]  
 
+  # entries to add (6 more elemetns):
+  # observer: t,r,theta, phi
+  # direction: RA,DEC
 
+  # 2 more entries to add:
+  # CMB dipole direction: lmax,rmax (needed for "invrotmap")
 
   logo = '''    
    _____            __                       ______  __

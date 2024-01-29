@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.33 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.35 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: SzekeresPy.py
 # 
@@ -403,19 +403,19 @@ class Szekeres:
         return light_ray
                
     def sky_map(self,obs):
-        NSIDE = 8
+        NSIDE = 16
         NPIX = hp.nside2npix(NSIDE)
         m = np.arange(NPIX)
         # >> directions should be provided as:
         #   - [RA], [DEC] arrays (in degrees) 
         #   - healy pixel array: NSIDE, [ipix] (RING order, i.e. healpy's default ordering)
         # >> allow for partial sky coverage:
+        # >> allow for the galactic coordinates: l[deg], b[deg]
         RA,DEC = hp.pix2ang(NSIDE,m,lonlat=True)
 
         point = np.zeros(7)
         point = 0.0,obs[0],obs[1],obs[2],1,1,1
         direction = np.ones(7)
-
 
         input_data = NPIX*np.ones(1)
         input_data = np.append(input_data,RA)
@@ -426,13 +426,65 @@ class Szekeres:
         input_data = np.append(input_data,direction)
         ND= input_data.size
 
-        szekeres_map, rmax,dmax = fortran.link_temperature(ND,input_data)
-        rcmb = -rmax +276.4
-        dcmb = -dmax + 29.3
-        CMB_rot = hp.Rotator(rot=[rcmb , dcmb],deg=True, inv=True)
-        temperature_map = CMB_rot.rotate_map_pixel(szekeres_map)
+        szekeres_cmb, rmax,dmax = fortran.link_temperature(ND,input_data)
+        self.szpar[11] = rmax
+        self.szpar[12] = dmax
+        self.szpar[13] = 1.0
 
-        return temperature_map      
+        rcmb = 276.4 - self.szpar[11]
+        dcmb = 29.3 - self.szpar[12]
+
+        CMB_rot = hp.Rotator(rot=[rcmb , dcmb],deg=True, inv=True)
+        temperature_map = CMB_rot.rotate_map_pixel(szekeres_cmb)
+# FIX needed: the above is in the galactic coordinats, not equorial 
+
+
+        return temperature_map
+
+
+    def column_density(self,obs,redshift):
+        NSIDE = 16
+        NPIX = hp.nside2npix(NSIDE)
+        m = np.arange(NPIX)
+        # >> directions should be provided as:
+        #   - [RA], [DEC] arrays (in degrees) 
+        #   - healy pixel array: NSIDE, [ipix] (RING order, i.e. healpy's default ordering)
+        # >> allow for partial sky coverage:
+        # >> allow for the galactic coordinates: l[deg], b[deg]
+        RA,DEC = hp.pix2ang(NSIDE,m,lonlat=True)
+
+        point = np.zeros(7)
+        point = 0.0,obs[0],obs[1],obs[2],redshift,1,1
+        direction = np.ones(7)
+
+        input_data = NPIX*np.ones(1)
+        input_data = np.append(input_data,RA)
+        input_data = np.append(input_data,DEC)        
+        input_data = np.append(input_data,self.cospar)
+        input_data = np.append(input_data,self.szpar)
+        input_data = np.append(input_data,point)
+        input_data = np.append(input_data,direction)
+        ND= input_data.size
+
+        if not self.szpar[13]:
+            szekeres_cmb, rmax,dmax = fortran.link_temperature(ND,input_data)
+            self.szpar[11] = rmax
+            self.szpar[12] = dmax
+            self.szpar[13] = 1.0
+        
+        szekeres_rho  = fortran.link_density(ND,input_data)
+        rcmb = 276.4 - self.szpar[11]
+        dcmb = 29.3 - self.szpar[12]
+        CMB_rot = hp.Rotator(rot=[rcmb , dcmb],deg=True, inv=True)
+        density_map = CMB_rot.rotate_map_pixel(szekeres_rho)
+# FIX needed: the above is in the galactic coordinats, not equorial 
+
+        return density_map 
+
+
+
+
+
 
 def initiate(astropy_cosmo=None, inhomog_cosmo=None):
   cospar = np.zeros(15)
@@ -446,7 +498,7 @@ def initiate(astropy_cosmo=None, inhomog_cosmo=None):
   }    
 
   perturbation_dict = {
-      "contrast" : -0.002,    
+      "contrast" : -0.0022,    
       "radius"   :  15.0,
       "slope"    :  0.4,
       "dipole"   :  0.4

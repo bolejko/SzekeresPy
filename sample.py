@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.33 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.35 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: sample.py
 # 
@@ -236,21 +236,27 @@ plt.show()
 
 
 #-------------------------------------------------------------
-#>>>> EXAMPLE 10: #sky maps
+#>>>> EXAMPLE 10: #sky map s
 #
-# this example can take a few minutes to complete
-# if you want to run it, change the flag to True
+# this example take a few minutes to complete,
+# depending on a machine could be more than 10 minutes (if run without openmp)
+# if you have time to run it, change the flag below to True
 
 run_example_10 = False
 
-r =14.0 
-theta = 0.8*np.pi   
+r =35.0 
+theta = 0.4*np.pi   
 phi = 0.5*np.pi
 observer = r, theta, phi
-szekeres_cosmo.update(dipole = 0.6)
+szekeres_cosmo.update(dipole = 0.55)
 
 if run_example_10:
-    healpy_map =  szekeres_cosmo.sky_map(observer) 
-    hp.mollview(healpy_map,title="CMB sky in the Szekeres model")
+    cmb_map =  szekeres_cosmo.sky_map(observer) 
+    hp.mollview(cmb_map,title="CMB sky in the Szekeres model")
     plt.show()
-  
+
+    redshift = 0.02
+    density_map = szekeres_cosmo.column_density(observer,redshift)
+    hp.mollview(density_map,title="Density contrast along the line of sight (normalised)")
+    plt.show()
+

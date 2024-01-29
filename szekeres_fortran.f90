@@ -1,5 +1,5 @@
 !########################################################################################################
-! SzekeresPy ver. 0.33 - Python package for cosmological calculations using the Szekeres Cosmological Model
+! SzekeresPy ver. 0.35 - Python package for cosmological calculations using the Szekeres Cosmological Model
 ! 
 ! File: szekeres_fortran.f90
 ! 
@@ -302,10 +302,11 @@ subroutine link_temperature(INTERFACE_FIX_REQUIRED,ND,input_data,temperature,rma
     integer :: INTERFACE_FIX_REQUIRED
     integer, intent(in) :: ND
     double precision, dimension(0:ND-1), intent(in) :: input_data
+
     double precision, dimension (0:((ND-45)/2)-1), intent(out) :: temperature
     double precision, intent(out) :: rmax,dmax
+    
     double precision, dimension (0:((ND-45)/2)-1) :: RA,DEC
-
     integer, parameter :: npypac = 15
     integer, parameter :: npyszek = 15
     integer, parameter :: npoint = 7
@@ -314,8 +315,8 @@ subroutine link_temperature(INTERFACE_FIX_REQUIRED,ND,input_data,temperature,rma
     double precision, dimension(npyszek) :: pyszek   
     double precision, dimension(npoint)  :: point,direction
     double precision, dimension(npoint)  :: szpoint,szdirection    
-    double precision :: tempi,age,tav
-
+    double precision, dimension(0:5) :: tempi
+    double precision :: age,tav
     double precision, dimension (100) :: szpac  
     INTERFACE_FIX_REQUIRED = 1 
     szpac(100) = 2
@@ -358,13 +359,14 @@ subroutine link_temperature(INTERFACE_FIX_REQUIRED,ND,input_data,temperature,rma
 
         call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
         call cmb_temperature(szpac,npoint,szpoint,szdirection,tempi)
-        temperature(ig) = tempi
+        temperature(ig) = tempi(0)
 
     enddo   
 !$OMP END PARALLEL DO  
 
     tav = sum(temperature)/(1d0*(ngrid))
     temperature = 2.725d0*((temperature/tav)- 1.0d0)
+
     imax= maxloc(temperature,1)
     rmax = RA(imax-1)
     dmax = DEC(imax-1)
@@ -374,105 +376,87 @@ subroutine link_temperature(INTERFACE_FIX_REQUIRED,ND,input_data,temperature,rma
 
 
 
-
-
 end subroutine link_temperature
 
-!--------------------------------------------------
-subroutine invrotmap(ra,dec,Lmaxi,Bmaxi,l,b)
-	implicit none
-	double precision ra,dec,pi,pi180,Lmaxi,Bmaxi
-	double precision Lmax,Bmax,lcmb,bcmb,x,y,z,DV(4),DA(4)
-	double precision ex1,ex2a,ex2b,ex2,ex
-	double precision ey1,ey2a,ey2b,ey2,ey
-	double precision ez1,ez2,ez
-	double precision l,b,rai,deci
 
-	pi = 4d0*datan(1d0)
-	pi180 = pi/180.0d0
-	rai = 	(ra)*pi180
-	deci = dec*pi180	
+!------------------------------------
+subroutine link_density(INTERFACE_FIX_REQUIRED,ND,input_data,density)
+    implicit none
+    integer :: INTERFACE_FIX_REQUIRED
+    integer, intent(in) :: ND
+    double precision, dimension(0:ND-1), intent(in) :: input_data
+    double precision, dimension (0:((ND-45)/2)-1), intent(out) :: density
+    double precision, dimension (0:((ND-45)/2)-1) :: RA,DEC
 
-	DV(2) = dcos(rai)*dcos(deci)
-	DV(3) = dsin(rai)*dcos(deci)
-	DV(4) = dsin(deci)
-	
-	Lmax = Lmaxi*pi180
-	Bmax = Bmaxi*pi180
-    !cCMB: 276.4, 29.3
-	lcmb  = 276.4d0*pi180
-	bcmb = 29.3d0*pi180
-		x = DV(2)
-		y = DV(3)
-		z = DV(4)
+    integer, parameter :: npypac = 15
+    integer, parameter :: npyszek = 15
+    integer, parameter :: npoint = 7
+    integer :: ig,ngrid,N1,N2
+    double precision, dimension(npypac)  :: pypac 
+    double precision, dimension(npyszek) :: pyszek   
+    double precision, dimension(npoint)  :: point,direction
+    double precision, dimension(npoint)  :: szpoint,szdirection    
+    double precision, dimension(0:5) :: tempi
+    double precision :: age,dav,zlim
 
-! Rotate OZ(-Lmax) then R-OY(+Bmax) then R-OY(-bcmb) then R-OZ(+lcmb):
-! ANTI-Rotate: R-OZ(-lcmb), then R-OY(+bcmb), then R-OY(-Bmax), then OZ(+Lmax)
-		call rotxyz(3,-lcmb,DV,DA)
-	DV=DA
-		call rotxyz(2,+bcmb,DV,DA)
-	DV=DA
-		call rotxyz(2,-Bmax,DV,DA)
-	DV=DA
-		call rotxyz(3,+Lmax,DV,DA)
+    double precision, dimension (100) :: szpac  
+    INTERFACE_FIX_REQUIRED = 1 
+    szpac(100) = 2
+    ngrid = int(input_data(0))
 
-	ez = DA(4)
-	ey = DA(3)
-	ex = DA(2)
+    if(ngrid.ne.((ND-45)/2)) then
+        print *, "Number of data: Python->Fortran error [Error 45-DN]"
+        stop
+    endif
 
 
-	  if(ez.ge.0d0) b = dasin(dabs(ez))
-	  if(ez.le.0d0) b = -dasin(dabs(ez)) 
-          if(ey.ge.0d0 .and. ex.ge.0d0) then
-          l = datan(dabs(ey/ex))
-          endif
-          if(ey.ge.0d0 .and. ex.le.0d0) then
-          l = pi - datan(dabs(ey/ex))
-          endif
-          if(ey.le.0d0 .and. ex.le.0d0) then
-          l = pi + datan(dabs(ey/ex))
-          endif
-          if(ey.le.0d0 .and. ex.ge.0d0) then
-          l = 2*pi-(datan(dabs(ey/ex)))
-          endif
-	  if(ex.eq.0d0 .and. ey.gt.0d0) l = 0.5d0*pi
-	  if(ex.eq.0d0 .and. ey.lt.0d0) l = 0.5d0*pi
-	  if(ex.eq.0d0 .and. ey.eq.0d0) l = 0.0d0*pi
+    N1 = 1;  N2 = (ND-45)/2
+    RA = input_data(N1:N2)
+    N1 = N2+1;  N2 = ND-45
+    DEC = input_data(N1:N2)
+    N1 = N2+1;  N2 = N1+15-1
+    pypac(1:15) =  input_data(N1:N2)
+    N1 = N2+1; N2 = N1+15-1
+    pyszek(1:15) =  input_data(N1:N2)
+    N1 = N2+1; N2 = N1+7-1
+    point(1:7) =  input_data(N1:N2)
+    N1 = N2+1; N2 = N1+7-1
+    direction(1:7)  =  input_data(N1:N2)
 
-	l=l/pi180
-	b=b/pi180
 
-end subroutine invrotmap
-!--------------------------------------------
-!--------------------------------------------
-subroutine rotxyz(n,theta,ri,ro)
-        implicit none
-        integer n
-        double precision ri(4),ro(4)
-        double precision xo,yo,zo,xi,yi,zi,theta
-            xi = ri(2)
-            yi = ri(3)
-            zi = ri(4)
-        if(n.eq.1) then
-            xo = xi
-            yo = dcos(theta)*yi - dsin(theta)*zi
-            zo = dsin(theta)*yi + dcos(theta)*zi	
-        endif
-        if(n.eq.2) then
-            xo = dcos(theta)*xi + dsin(theta)*zi
-            yo = yi
-            zo = -dsin(theta)*xi + dcos(theta)*zi	
-        endif
-        if(n.eq.3) then
-            xo = dcos(theta)*xi - dsin(theta)*yi
-            yo = dsin(theta)*xi + dcos(theta)*yi
-            zo = zi	
-        endif
-            ro(2) = xo
-            ro(3) = yo	
-            ro(4) = zo
-end subroutine rotxyz
-    !--------------------------------------------
+    call parameter_values(npypac,pypac,npyszek,pyszek,szpac)
+    call age_from_initial(szpac)
+    age = szpac(10)
+
+!$OMP PARALLEL DO DEFAULT(NONE) &
+!$OMP PRIVATE(ig,szpac,szpoint,szdirection,zlim,tempi) &
+!$OMP SHARED(ngrid,RA,DEC,pypac,pyszek,point,age,density)
+    do ig=0,ngrid-1
+
+        szpoint = point
+        szdirection(1) = RA(ig)
+        szdirection(2) = DEC(ig)
+        szpac(100) = 2
+        szpac(10)  = age 
+        zlim = point(5)
+        call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
+        call rho_map(zlim,szpac,npoint,szpoint,szdirection,tempi)
+
+        density(ig) = tempi(1)
+
+    enddo   
+!$OMP END PARALLEL DO  
+
+
+    dav = sum(density)/(1d0*(ngrid))
+    density = ((density/dav)- 1.0d0)
+
+
+
+
+end subroutine link_density
+
+
 !------------------------------------
 subroutine link_null(INTERFACE_FIX_REQUIRED,ND,input_data,temporal,radial,thetal,phial,extral)
     implicit none
@@ -559,12 +543,12 @@ end subroutine link_distance
 !------------------------------------
 
 
-subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
+subroutine rho_map(zlim,szpac,npoint,point,direction,tempi)
     implicit none
     double precision,  dimension (100) :: szpac  
     integer, intent(in) :: npoint
     double precision, dimension(npoint) :: point, direction    
-    double precision, intent(out) :: tempi
+    double precision, dimension(0:5), intent(out) :: tempi
     double precision, dimension(0:3)   :: PV,PVi,PVii,NV,NVi,NVii,AV
     double precision, dimension(4,0:3) :: PRK,NRK
     integer :: Ui,I,J,iz
@@ -575,7 +559,7 @@ subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
     double precision :: xp,xp1,xp2,xp3
     double precision :: ds,dss,rmin
     double precision :: null_test,f16
-    double precision :: tlim,t,redi
+    double precision :: t,zlim,z
 
     f16 = 1.0d0/6.0d0
     iz = 0
@@ -583,11 +567,13 @@ subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
     dss = 100.d0
     ds = dss
     rmin = 12.0
-    tlim = -2.0d0**18
+
 
     ! FIX needed: adaptive step
 
     call initial_conditions(szpac,npoint,point,direction,PV,NV)
+
+    tempi = 0.0
 
     F = 0.0
     F(6) = szpac(87)*szpac(23)
@@ -642,6 +628,136 @@ subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
     call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
     D(4) = szpac(81)*1d-3
 
+! FIX needed, the following is for testing only, should be replaced with proper integration
+    F(6) =  F(6)  + ds*szpac(87)*szpac(23)
+    F(10) = F(10) + ds
+
+    t = PV(0)
+    z = abs(NV(0)) - 1.0
+        if (z > zlim .and. I>1) then
+            yp1(0:3) = NVii; yp1(4:5) = Dii(4:5); yp1(6:10) = Fii(6:10)
+            yp2(0:3) = NVi;  yp2(4:5) = Di(4:5);  yp2(6:10) = Fi(6:10)
+            yp3(0:3) = NV;   yp3(4:5) = D(4:5);;  yp3(6:10) = F(6:10)
+
+            yp = 0.0d0
+            xp1 = dabs(NVii(0)) - 1.0d0
+            xp2 = dabs(NVi(0)) - 1.0d0
+            xp3 = dabs(NV(0)) - 1.0d0
+            xp = zlim
+            yp = yp + yp1*((xp - xp2)/(xp1-xp2))*((xp - xp3)/(xp1-xp3))
+            yp = yp + yp2*((xp - xp1)/(xp2-xp1))*((xp - xp3)/(xp2-xp3))
+            yp = yp + yp3*((xp - xp1)/(xp3-xp1))*((xp - xp2)/(xp3-xp2))
+        
+                 
+            tempi(1) = F(6)/F(10)
+
+            exit
+        endif
+
+        PVii = PVi
+        PVi  = PV
+        NVii = NVi
+        NVi  = NV
+        Dii = Di
+        Di = D
+
+        Fii = Fi
+        Fi = F
+
+    enddo
+
+end subroutine rho_map
+!----------------------------------------------
+
+
+subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
+    implicit none
+    double precision,  dimension (100) :: szpac  
+    integer, intent(in) :: npoint
+    double precision, dimension(npoint) :: point, direction    
+    double precision, dimension(0:5), intent(out) :: tempi
+    double precision, dimension(0:3)   :: PV,PVi,PVii,NV,NVi,NVii,AV
+    double precision, dimension(4,0:3) :: PRK,NRK
+    integer :: Ui,I,J,iz
+    double precision,dimension(0:10) :: yp,yp1,yp2,yp3
+    double precision,dimension(4:5) :: D,Di,Dii
+    double precision,dimension(6:10) :: F,Fi,Fii
+    double precision :: DA,ADA
+    double precision :: xp,xp1,xp2,xp3
+    double precision :: ds,dss,rmin
+    double precision :: null_test,f16
+    double precision :: tlim,t
+
+    f16 = 1.0d0/6.0d0
+    iz = 0
+    Ui = 100000
+    dss = 80.d0
+    ds = dss
+    rmin = 12.0
+    tlim = -2.0d0**18
+
+    ! FIX needed: adaptive step
+
+    call initial_conditions(szpac,npoint,point,direction,PV,NV)
+
+    tempi = 0.0
+
+    F = 0.0
+    F(6) = szpac(87)*szpac(23)
+    Fi = F; Fii = F
+
+    D(4) = szpac(81)*1d-3
+    Di = D; Dii = D
+    PVi=PV; PVii=PV
+    NVi=NV; NVii=NV
+    PRK = 0.0d0
+    NRK = 0.0d0
+
+    do I=1,Ui
+
+        if(PV(1).le.rmin) ds = 0.001 + dss*(abs(PV(1)/rmin))
+        if(PV(1).ge.rmin) ds = dss
+
+        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        do J=0,3
+        PRK(1,J) = NV(J)*ds
+        NRK(1,J) = AV(J)*ds
+        PV(J) = PVi(J) + 0.5*PRK(1,J)
+        NV(J) = NVi(J) + 0.5*NRK(1,J)
+        enddo
+
+        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        do J=0,3
+        PRK(2,J) = NV(J)*ds
+        NRK(2,J) = AV(J)*ds
+        PV(J) = PVi(J) + 0.5*PRK(2,J)
+        NV(J) = NVi(J) + 0.5*NRK(2,J)
+        enddo
+
+        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        do J=0,3
+        PRK(3,J) = NV(J)*ds
+        NRK(3,J) = AV(J)*ds
+        PV(J) = PVi(J) + PRK(3,J)
+        NV(J) = NVi(J) + NRK(3,J)
+        enddo
+
+        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        do J=0,3
+        PRK(4,J) = NV(J)*ds
+        NRK(4,J) = AV(J)*ds
+        PV(J) = PVi(J) + f16*(PRK(1,J) + 2.0d0*(PRK(2,J) + PRK(3,J)) + PRK(4,J))
+        NV(J) = NVi(J) + f16*(NRK(1,J) + 2.0d0*(NRK(2,J) + NRK(3,J)) + NRK(4,J))
+        enddo
+
+
+! FIX needed: adjust the step to the grid
+    call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+    D(4) = szpac(81)*1d-3
+
+    F(6) =  F(6)  + ds*szpac(87)*szpac(23)
+    F(10) = F(10) + ds
+
     t = PV(0)
         if (t < tlim .and. I>1) then
             yp1(0:3) = NVii; yp1(4:5) = Dii(4:5); yp1(6:10) = Fii(6:10)
@@ -657,8 +773,10 @@ subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
             yp = yp + yp2*((xp - xp1)/(xp2-xp1))*((xp - xp3)/(xp2-xp3))
             yp = yp + yp3*((xp - xp1)/(xp3-xp1))*((xp - xp2)/(xp3-xp2))
         
-            tempi = 1.0d0/abs(yp(0)) 
+            tempi(0) = 1.0d0/abs(yp(0)) 
             
+            tempi(1) = F(6)/F(10)
+
             exit
         endif
 
@@ -1986,6 +2104,89 @@ subroutine szekeres_specifics(szpac,r)
 
 end subroutine szekeres_specifics
 !--------------------------------------------------
+!--------------------------------------------------
+subroutine invrotmap(ra,dec,Lmaxi,Bmaxi,l,b)
+
+    implicit none
+    double precision ra,dec,pi,pi180,Lmaxi,Bmaxi
+    double precision Lmax,Bmax,lcmb,bcmb,x,y,z,DV(4),DA(4)
+    double precision ex,ey,ez
+    double precision l,b,rai,deci
+
+    pi = 4d0*datan(1d0)
+    pi180 = pi/180.0d0
+    rai = (ra)*pi180
+    deci = dec*pi180
+
+    DV(2) = dsin(deci)
+    DV(3) = dcos(rai)*dcos(deci)
+    DV(4) = dsin(rai)*dcos(deci)
+	
+    Lmax = Lmaxi*pi180
+    Bmax = Bmaxi*pi180
+    
+    lcmb  = 276.4d0*pi180
+    bcmb = 29.3d0*pi180
+        x = DV(2)
+        y = DV(3)
+        z = DV(4)
+
+! Rotate OZ(-Lmax) then R-OY(+Bmax) then R-OY(-bcmb) then R-OZ(+lcmb):
+! ANTI-Rotate: R-OZ(-lcmb), then R-OY(+bcmb), then R-OY(-Bmax), then OZ(+Lmax)
+    call rotxyz(3,-lcmb,DV,DA)
+        DV=DA
+    call rotxyz(2,+bcmb,DV,DA)
+        DV=DA
+    call rotxyz(2,-Bmax,DV,DA)
+        DV=DA
+    call rotxyz(3,+Lmax,DV,DA)
+
+    ez = DA(4)
+    ey = DA(3)
+    ex = DA(2)
+
+    if(ez.ge.0d0) b = dasin(dabs(ez))
+    if(ez.le.0d0) b = -dasin(dabs(ez)) 
+    if(ey.ge.0d0 .and. ex.ge.0d0) l = datan(dabs(ey/ex))
+    if(ey.ge.0d0 .and. ex.le.0d0) l = pi - datan(dabs(ey/ex))
+    if(ey.le.0d0 .and. ex.le.0d0) l = pi + datan(dabs(ey/ex))
+    if(ey.le.0d0 .and. ex.ge.0d0) l = 2*pi-(datan(dabs(ey/ex)))
+    if(ex.eq.0d0 .and. ey.gt.0d0) l = 0.5d0*pi
+    if(ex.eq.0d0 .and. ey.lt.0d0) l = 0.5d0*pi
+    if(ex.eq.0d0 .and. ey.eq.0d0) l = 0.0d0*pi
+    l=l/pi180
+    b=b/pi180
+
+end subroutine invrotmap
+!--------------------------------------------
+subroutine rotxyz(n,theta,ri,ro)
+    implicit none
+    integer n
+    double precision ri(4),ro(4)
+    double precision xo,yo,zo,xi,yi,zi,theta
+        xi = ri(2)
+        yi = ri(3)
+        zi = ri(4)
+        if(n.eq.1) then
+            xo = xi
+            yo = dcos(theta)*yi - dsin(theta)*zi
+            zo = dsin(theta)*yi + dcos(theta)*zi
+        endif
+        if(n.eq.2) then
+            xo = dcos(theta)*xi + dsin(theta)*zi
+            yo = yi
+            zo = -dsin(theta)*xi + dcos(theta)*zi
+        endif
+        if(n.eq.3) then
+            xo = dcos(theta)*xi - dsin(theta)*yi
+            yo = dsin(theta)*xi + dcos(theta)*yi
+            zo = zi
+        endif
+            ro(2) = xo
+            ro(3) = yo
+            ro(4) = zo
+end subroutine rotxyz
+!--------------------------------------------
 
 subroutine parameter_names(print_names,szpac,szpan)
     implicit none

@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.36 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.4 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: SzekeresPy.py
 # 
@@ -429,7 +429,8 @@ class Szekeres:
         szekeres_cmb, rmax,dmax = fortran.link_temperature(ND,input_data)
         self.szpar[11] = rmax
         self.szpar[12] = dmax
-        self.szpar[13] = 1.0
+        self.szpar[13] = self.update_counter[0]
+                   
 
         rcmb = 276.4 - self.szpar[11]
         dcmb = 29.3 - self.szpar[12]
@@ -466,7 +467,7 @@ class Szekeres:
         input_data = np.append(input_data,direction)
         ND= input_data.size
 
-        if not self.szpar[13]:
+        if self.szpar[13]  != self.update_counter[0]:
             szekeres_cmb, rmax,dmax = fortran.link_temperature(ND,input_data)
             self.szpar[11] = rmax
             self.szpar[12] = dmax

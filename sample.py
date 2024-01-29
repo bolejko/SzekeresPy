@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.36 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.4 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: sample.py
 # 
@@ -242,7 +242,7 @@ plt.show()
 # depending on a machine could be more than 10 minutes (if run without openmp)
 # if you have time to run it, change the flag below to True
 
-run_example_10 = False
+run_example_10 = True
 
 r =35.0 
 theta = 0.4*np.pi   

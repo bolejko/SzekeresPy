@@ -1,5 +1,5 @@
 !########################################################################################################
-! SzekeresPy ver. 0.35 - Python package for cosmological calculations using the Szekeres Cosmological Model
+! SzekeresPy ver. 0.36 - Python package for cosmological calculations using the Szekeres Cosmological Model
 ! 
 ! File: szekeres_fortran.f90
 ! 
@@ -380,12 +380,12 @@ end subroutine link_temperature
 
 
 !------------------------------------
-subroutine link_density(INTERFACE_FIX_REQUIRED,ND,input_data,density)
+subroutine link_density(INTERFACE_FIX_REQUIRED,ND,input_data,density,expansion,shear,weyl)
     implicit none
     integer :: INTERFACE_FIX_REQUIRED
     integer, intent(in) :: ND
     double precision, dimension(0:ND-1), intent(in) :: input_data
-    double precision, dimension (0:((ND-45)/2)-1), intent(out) :: density
+    double precision, dimension (0:((ND-45)/2)-1), intent(out) :: density,expansion,shear,weyl
     double precision, dimension (0:((ND-45)/2)-1) :: RA,DEC
 
     integer, parameter :: npypac = 15
@@ -430,7 +430,7 @@ subroutine link_density(INTERFACE_FIX_REQUIRED,ND,input_data,density)
 
 !$OMP PARALLEL DO DEFAULT(NONE) &
 !$OMP PRIVATE(ig,szpac,szpoint,szdirection,zlim,tempi) &
-!$OMP SHARED(ngrid,RA,DEC,pypac,pyszek,point,age,density)
+!$OMP SHARED(ngrid,RA,DEC,pypac,pyszek,point,age,density,expansion,shear,weyl)
     do ig=0,ngrid-1
 
         szpoint = point
@@ -443,11 +443,13 @@ subroutine link_density(INTERFACE_FIX_REQUIRED,ND,input_data,density)
         call rho_map(zlim,szpac,npoint,szpoint,szdirection,tempi)
 
         density(ig) = tempi(1)
-
+        expansion(ig) = tempi(2)
+        shear(ig) = tempi(3)
+        weyl(ig) = tempi(4)
     enddo   
 !$OMP END PARALLEL DO  
 
-
+    
     dav = sum(density)/(1d0*(ngrid))
     density = ((density/dav)- 1.0d0)
 
@@ -577,6 +579,10 @@ subroutine rho_map(zlim,szpac,npoint,point,direction,tempi)
 
     F = 0.0
     F(6) = szpac(87)*szpac(23)
+    F(7) = szpac(88)*szpac(21)
+    F(8) = szpac(88)*szpac(21)
+    F(9) = szpac(88)*szpac(23)
+
     Fi = F; Fii = F
 
     D(4) = szpac(81)*1d-3
@@ -590,6 +596,8 @@ subroutine rho_map(zlim,szpac,npoint,point,direction,tempi)
 
         if(PV(1).le.rmin) ds = 0.001 + dss*(abs(PV(1)/rmin))
         if(PV(1).ge.rmin) ds = dss
+
+! FIX needed:  safegaurd for orgin-crossing
 
         call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
         do J=0,3
@@ -630,6 +638,9 @@ subroutine rho_map(zlim,szpac,npoint,point,direction,tempi)
 
 ! FIX needed, the following is for testing only, should be replaced with proper integration
     F(6) =  F(6)  + ds*szpac(87)*szpac(23)
+    F(7) =  F(7)  + ds*szpac(88)*szpac(21)
+    F(8) =  F(8)  + ds*szpac(88)*szpac(21)
+    F(9) =  F(9)  + ds*szpac(88)*szpac(23)
     F(10) = F(10) + ds
 
     t = PV(0)
@@ -650,7 +661,9 @@ subroutine rho_map(zlim,szpac,npoint,point,direction,tempi)
         
                  
             tempi(1) = F(6)/F(10)
-
+            tempi(2) = F(7)/F(10)
+            tempi(3) = F(8)/F(10)
+            tempi(4) = F(9)/F(10)
             exit
         endif
 
@@ -691,7 +704,7 @@ subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
     f16 = 1.0d0/6.0d0
     iz = 0
     Ui = 100000
-    dss = 80.d0
+    dss = 100.d0
     ds = dss
     rmin = 12.0
     tlim = -2.0d0**18
@@ -882,8 +895,6 @@ subroutine angular_distance(szpac,npoint,point,direction,ngrid,redshiftal,distan
         VDA = VDAi + VRK(3)
         DA  = DAi  + DRK(3)
 
-     
-
         call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
         do J=0,3
         PRK(4,J) = NV(J)*ds
@@ -916,11 +927,6 @@ subroutine angular_distance(szpac,npoint,point,direction,ngrid,redshiftal,distan
             yp = yp + yp1*((xp - xp2)/(xp1-xp2))*((xp - xp3)/(xp1-xp3))
             yp = yp + yp2*((xp - xp1)/(xp2-xp1))*((xp - xp3)/(xp2-xp3))
             yp = yp + yp3*((xp - xp1)/(xp3-xp1))*((xp - xp2)/(xp3-xp2))
-         !   temporal(iz) = yp(0)*szpac(25)*1d-3
-         !   radial(iz)   = yp(4)  ! alternativel use: yp(1)  
-         !   phial(iz)    = yp(2)
-         !   thetal(iz)   = yp(3)
-         !   extral(iz) = null_test
             distance(iz) = yp(5) * 1d-3
             iz=iz+1
             if(iz == ngrid) exit
@@ -1043,6 +1049,8 @@ subroutine null_geodesic(szpac,npoint,point,direction,ngrid,redshiftal,temporal,
             if(iz == ngrid) exit
         endif
 
+! FIX needed: further tests/diagnostics
+
         PVii = PVi
         PVi  = PV
         NVii = NVi
@@ -1124,7 +1132,7 @@ subroutine null_initial(szpac,npoint,point,direction,NV)
     double precision :: mk,mki,mkis,sna,snc
     double precision :: k,qr,pr,s,sr,si,W,Wi,N1,N2,N3
 
-    epsilon_dir = 1d-2; epsilon_ang = 1d-10
+    epsilon_dir = 1d-8; epsilon_ang = 1d-10
     717 continue
     RA = direction(1)*szpac(33) + epsilon_ang
     DEC = direction(2)*szpac(33) + epsilon_ang
@@ -1193,8 +1201,8 @@ subroutine null_initial(szpac,npoint,point,direction,NV)
     N3 = NV(3)*aR*sth
 
     if (N1.le.epsilon_dir.and.(abs(N2).le.epsilon_dir.and.abs(N3).le.epsilon_dir)) then
-        epsilon_ang = epsilon_ang + 1d-2
-        if(epsilon_ang>8d-2) then
+        epsilon_ang = epsilon_ang + 1d-3
+        if(epsilon_ang>2d-2) then
             print *, "Initial condition problem, terminting [Error 717]"
             stop
         endif
@@ -1220,12 +1228,12 @@ subroutine christoffels2(szpac,PV,GIJ,GAM)
     double precision :: aR,aRt, aRr, aRrr, aRtr,aRtrr,aRi,aR2,rs1,rs2
     double precision :: sth,cth,sph,cph,sthi,sth2,n,nd,nr,ndr,mcth,mcth2
     double precision :: si,si2,si3,mk,mki,mki2,mksi,mns2,mnss,mns,nsc,nd2
-    double precision :: m,mr,mrr,k,kr,krr,q,qr,qrr,p,pr,prr,s,sr,srr
-    double precision :: GW,GWi, g11_part_1, g11_part_2
+    double precision :: m,mr,mrr,k,kr,krr,q,qr,qrr,p,pr,prr,s,sr,srr,epr
+    double precision :: GW,GWi, g11_part_1, g11_part_2,denumerator,f13
     integer :: I,J,G,H
 
     call areal_evolution(szpac,PV)
-
+    f13 = 1.0d0/3.0d0
     aRi   = szpac(80)
     aR    = szpac(81)
     aRr   = szpac(82)
@@ -1278,10 +1286,15 @@ subroutine christoffels2(szpac,PV,GIJ,GAM)
     mns = mcth*n + sr*sth
     mnss = mns*s  
     mns2 = mns*mns
-  
+    epr = nsc*si
 
-    szpac(87) = 2.0d0*(mr-3.0d0*m*nsc*si)*aRi*aRi/(aRr - aR*nsc*si)
-    
+    denumerator = 1.0d0/(aRr - aR*epr)
+    szpac(87) = 2.0d0*(mr-3.0d0*m*epr)*aRi*aRi*denumerator
+    szpac(88) = (aRtr + 2*aRt*aRr*aRi - 3.0d0*aRt*epr)*denumerator*f13
+    szpac(89) = -(aRtr - aRt*aRr*aRi)*f13*denumerator
+    szpac(90) = m*(3*aRr - aR*mr*m)*f13*aRi*aRi*aRi*denumerator
+
+! FIX required: above should be provided by a separate function/subroutine 
 
     g11_part_1 = -mki*(  (aRr + rs1*(sr*cth + n*sth) )**2    )
     g11_part_2 =  -rs2*( (sr*sth + n*mcth)**2 + (nd*mcth)**2  )

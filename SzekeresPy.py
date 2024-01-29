@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.35 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.36 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: SzekeresPy.py
 # 
@@ -472,14 +472,18 @@ class Szekeres:
             self.szpar[12] = dmax
             self.szpar[13] = 1.0
         
-        szekeres_rho  = fortran.link_density(ND,input_data)
+        rho, tht, shr, wey   = fortran.link_density(ND,input_data)
         rcmb = 276.4 - self.szpar[11]
         dcmb = 29.3 - self.szpar[12]
         CMB_rot = hp.Rotator(rot=[rcmb , dcmb],deg=True, inv=True)
-        density_map = CMB_rot.rotate_map_pixel(szekeres_rho)
+        density_map = CMB_rot.rotate_map_pixel(rho)
+        expansion_map = CMB_rot.rotate_map_pixel(tht)
+        shear_map = CMB_rot.rotate_map_pixel(shr)
+        weyl_map = CMB_rot.rotate_map_pixel(wey)
+    
 # FIX needed: the above is in the galactic coordinats, not equorial 
 
-        return density_map 
+        return density_map, expansion_map, shear_map, weyl_map
 
 
 

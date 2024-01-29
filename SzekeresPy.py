@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.32 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.33 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: SzekeresPy.py
 # 
@@ -427,9 +427,10 @@ class Szekeres:
         ND= input_data.size
 
         szekeres_map, rmax,dmax = fortran.link_temperature(ND,input_data)
-
-        temperature_map  = szekeres_map
-
+        rcmb = -rmax +276.4
+        dcmb = -dmax + 29.3
+        CMB_rot = hp.Rotator(rot=[rcmb , dcmb],deg=True, inv=True)
+        temperature_map = CMB_rot.rotate_map_pixel(szekeres_map)
 
         return temperature_map      
 

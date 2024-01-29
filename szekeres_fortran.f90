@@ -1,5 +1,5 @@
 !########################################################################################################
-! SzekeresPy ver. 0.32 - Python package for cosmological calculations using the Szekeres Cosmological Model
+! SzekeresPy ver. 0.33 - Python package for cosmological calculations using the Szekeres Cosmological Model
 ! 
 ! File: szekeres_fortran.f90
 ! 
@@ -313,6 +313,7 @@ subroutine link_temperature(INTERFACE_FIX_REQUIRED,ND,input_data,temperature,rma
     double precision, dimension(npypac)  :: pypac 
     double precision, dimension(npyszek) :: pyszek   
     double precision, dimension(npoint)  :: point,direction
+    double precision, dimension(npoint)  :: szpoint,szdirection    
     double precision :: tempi,age,tav
 
     double precision, dimension (100) :: szpac  
@@ -344,20 +345,19 @@ subroutine link_temperature(INTERFACE_FIX_REQUIRED,ND,input_data,temperature,rma
     call age_from_initial(szpac)
     age = szpac(10)
 
-
-
-
 !$OMP PARALLEL DO DEFAULT(NONE) &
-!$OMP PRIVATE(ig,szpac,direction,tempi) &
+!$OMP PRIVATE(ig,szpac,szpoint,szdirection,tempi) &
 !$OMP SHARED(ngrid,RA,DEC,pypac,pyszek,point,age,temperature)
     do ig=0,ngrid-1
 
-        direction(1) = RA(ig)
-        direction(2) = DEC(ig)
-
+        szpoint = point
+        szdirection(1) = RA(ig)
+        szdirection(2) = DEC(ig)
+        szpac(100) = 2
         szpac(10)  = age 
+
         call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
-        call cmb_temperature(szpac,npoint,point,direction,tempi)
+        call cmb_temperature(szpac,npoint,szpoint,szdirection,tempi)
         temperature(ig) = tempi
 
     enddo   
@@ -370,11 +370,109 @@ subroutine link_temperature(INTERFACE_FIX_REQUIRED,ND,input_data,temperature,rma
     dmax = DEC(imax-1)
 
 
+   ! call invrotmap(RA,DEC,Lmax,Bmax,lt,bt)
+
+
+
 
 
 end subroutine link_temperature
 
+!--------------------------------------------------
+subroutine invrotmap(ra,dec,Lmaxi,Bmaxi,l,b)
+	implicit none
+	double precision ra,dec,pi,pi180,Lmaxi,Bmaxi
+	double precision Lmax,Bmax,lcmb,bcmb,x,y,z,DV(4),DA(4)
+	double precision ex1,ex2a,ex2b,ex2,ex
+	double precision ey1,ey2a,ey2b,ey2,ey
+	double precision ez1,ez2,ez
+	double precision l,b,rai,deci
 
+	pi = 4d0*datan(1d0)
+	pi180 = pi/180.0d0
+	rai = 	(ra)*pi180
+	deci = dec*pi180	
+
+	DV(2) = dcos(rai)*dcos(deci)
+	DV(3) = dsin(rai)*dcos(deci)
+	DV(4) = dsin(deci)
+	
+	Lmax = Lmaxi*pi180
+	Bmax = Bmaxi*pi180
+    !cCMB: 276.4, 29.3
+	lcmb  = 276.4d0*pi180
+	bcmb = 29.3d0*pi180
+		x = DV(2)
+		y = DV(3)
+		z = DV(4)
+
+! Rotate OZ(-Lmax) then R-OY(+Bmax) then R-OY(-bcmb) then R-OZ(+lcmb):
+! ANTI-Rotate: R-OZ(-lcmb), then R-OY(+bcmb), then R-OY(-Bmax), then OZ(+Lmax)
+		call rotxyz(3,-lcmb,DV,DA)
+	DV=DA
+		call rotxyz(2,+bcmb,DV,DA)
+	DV=DA
+		call rotxyz(2,-Bmax,DV,DA)
+	DV=DA
+		call rotxyz(3,+Lmax,DV,DA)
+
+	ez = DA(4)
+	ey = DA(3)
+	ex = DA(2)
+
+
+	  if(ez.ge.0d0) b = dasin(dabs(ez))
+	  if(ez.le.0d0) b = -dasin(dabs(ez)) 
+          if(ey.ge.0d0 .and. ex.ge.0d0) then
+          l = datan(dabs(ey/ex))
+          endif
+          if(ey.ge.0d0 .and. ex.le.0d0) then
+          l = pi - datan(dabs(ey/ex))
+          endif
+          if(ey.le.0d0 .and. ex.le.0d0) then
+          l = pi + datan(dabs(ey/ex))
+          endif
+          if(ey.le.0d0 .and. ex.ge.0d0) then
+          l = 2*pi-(datan(dabs(ey/ex)))
+          endif
+	  if(ex.eq.0d0 .and. ey.gt.0d0) l = 0.5d0*pi
+	  if(ex.eq.0d0 .and. ey.lt.0d0) l = 0.5d0*pi
+	  if(ex.eq.0d0 .and. ey.eq.0d0) l = 0.0d0*pi
+
+	l=l/pi180
+	b=b/pi180
+
+end subroutine invrotmap
+!--------------------------------------------
+!--------------------------------------------
+subroutine rotxyz(n,theta,ri,ro)
+        implicit none
+        integer n
+        double precision ri(4),ro(4)
+        double precision xo,yo,zo,xi,yi,zi,theta
+            xi = ri(2)
+            yi = ri(3)
+            zi = ri(4)
+        if(n.eq.1) then
+            xo = xi
+            yo = dcos(theta)*yi - dsin(theta)*zi
+            zo = dsin(theta)*yi + dcos(theta)*zi	
+        endif
+        if(n.eq.2) then
+            xo = dcos(theta)*xi + dsin(theta)*zi
+            yo = yi
+            zo = -dsin(theta)*xi + dcos(theta)*zi	
+        endif
+        if(n.eq.3) then
+            xo = dcos(theta)*xi - dsin(theta)*yi
+            yo = dsin(theta)*xi + dcos(theta)*yi
+            zo = zi	
+        endif
+            ro(2) = xo
+            ro(3) = yo	
+            ro(4) = zo
+end subroutine rotxyz
+    !--------------------------------------------
 !------------------------------------
 subroutine link_null(INTERFACE_FIX_REQUIRED,ND,input_data,temporal,radial,thetal,phial,extral)
     implicit none
@@ -470,25 +568,31 @@ subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
     double precision, dimension(0:3)   :: PV,PVi,PVii,NV,NVi,NVii,AV
     double precision, dimension(4,0:3) :: PRK,NRK
     integer :: Ui,I,J,iz
-    double precision,dimension(0:5) :: yp,yp1,yp2,yp3
+    double precision,dimension(0:10) :: yp,yp1,yp2,yp3
     double precision,dimension(4:5) :: D,Di,Dii
+    double precision,dimension(6:10) :: F,Fi,Fii
     double precision :: DA,ADA
     double precision :: xp,xp1,xp2,xp3
     double precision :: ds,dss,rmin
     double precision :: null_test,f16
-    double precision :: tlim,t
+    double precision :: tlim,t,redi
 
     f16 = 1.0d0/6.0d0
     iz = 0
     Ui = 100000
-    dss = 10.d0
+    dss = 100.d0
     ds = dss
-    rmin = 8.0
+    rmin = 12.0
     tlim = -2.0d0**18
 
     ! FIX needed: adaptive step
 
     call initial_conditions(szpac,npoint,point,direction,PV,NV)
+
+    F = 0.0
+    F(6) = szpac(87)*szpac(23)
+    Fi = F; Fii = F
+
     D(4) = szpac(81)*1d-3
     Di = D; Dii = D
     PVi=PV; PVii=PV
@@ -498,7 +602,7 @@ subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
 
     do I=1,Ui
 
-        if(PV(1).le.rmin) ds = 0.0001 + dss*(PV(1)/rmin)
+        if(PV(1).le.rmin) ds = 0.001 + dss*(abs(PV(1)/rmin))
         if(PV(1).ge.rmin) ds = dss
 
         call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
@@ -540,9 +644,9 @@ subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
 
     t = PV(0)
         if (t < tlim .and. I>1) then
-            yp1(0:3) = NVii; yp1(4:5) = Dii(4:5)
-            yp2(0:3) = NVi; yp2(4:5) = Di(4:5)
-            yp3(0:3) = NV; yp3(4:5) = D(4:5)
+            yp1(0:3) = NVii; yp1(4:5) = Dii(4:5); yp1(6:10) = Fii(6:10)
+            yp2(0:3) = NVi;  yp2(4:5) = Di(4:5);  yp2(6:10) = Fi(6:10)
+            yp3(0:3) = NV;   yp3(4:5) = D(4:5);;  yp3(6:10) = F(6:10)
 
             yp = 0.0d0
             xp1 = PVii(0)
@@ -552,7 +656,9 @@ subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
             yp = yp + yp1*((xp - xp2)/(xp1-xp2))*((xp - xp3)/(xp1-xp3))
             yp = yp + yp2*((xp - xp1)/(xp2-xp1))*((xp - xp3)/(xp2-xp3))
             yp = yp + yp3*((xp - xp1)/(xp3-xp1))*((xp - xp2)/(xp3-xp2))
+        
             tempi = 1.0d0/abs(yp(0)) 
+            
             exit
         endif
 
@@ -562,6 +668,9 @@ subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
         NVi  = NV
         Dii = Di
         Di = D
+
+        Fii = Fi
+        Fi = F
 
     enddo
 
@@ -587,8 +696,6 @@ subroutine angular_distance(szpac,npoint,point,direction,ngrid,redshiftal,distan
     double precision :: null_test,f16
 
  
-
-
     f16 = 1.0d0/6.0d0
     iz = 0
     Ui = 100000
@@ -897,9 +1004,9 @@ subroutine null_initial(szpac,npoint,point,direction,NV)
     double precision :: aR,aRi,aRr
     double precision :: sth,cth,sph,cph,sthi,n,nd,mcth
     double precision :: mk,mki,mkis,sna,snc
-    double precision :: k,qr,pr,s,sr,si,W,Wi
+    double precision :: k,qr,pr,s,sr,si,W,Wi,N1,N2,N3
 
-    epsilon_dir = 1d-10; epsilon_ang = 1d-10
+    epsilon_dir = 1d-2; epsilon_ang = 1d-10
     717 continue
     RA = direction(1)*szpac(33) + epsilon_ang
     DEC = direction(2)*szpac(33) + epsilon_ang
@@ -963,9 +1070,12 @@ subroutine null_initial(szpac,npoint,point,direction,NV)
         enddo
     enddo
 
+    N1 = NV(1)
+    N2 = NV(2)*aR
+    N3 = NV(3)*aR*sth
 
-    if (NV(1).le.epsilon_dir.and.abs(NV(2)).le.epsilon_dir.and.abs(NV(3)).le.epsilon_dir) then
-        epsilon_ang = epsilon_ang + 2d-2
+    if (N1.le.epsilon_dir.and.(abs(N2).le.epsilon_dir.and.abs(N3).le.epsilon_dir)) then
+        epsilon_ang = epsilon_ang + 1d-2
         if(epsilon_ang>8d-2) then
             print *, "Initial condition problem, terminting [Error 717]"
             stop

@@ -1,7 +1,7 @@
 ## Introduction
 
 SzekeresPy is a Python package for cosmological calculations using the Szekeres Cosmological Model. The Szekeres model is an inhomogeneous, anisotropic, cosmological solution of Einstein's equations. In the limit of spherical symmetry it reduces to the Lemaitre-Tolman-Bondi (LTB) class of models, and in the limit of homogeneity, to FLRW models.
-The SzekeresPy can therefore be used to investigate LTB models or to perform calculations for FLRW cosmologies, including the ΛCDM model.
+The SzekeresPy can therefore be used to investigate LTB models (set 'dipole=0') or to perform calculations for FLRW cosmologies (set 'contrast=0'), including the ΛCDM model.
 
 The code is still in its early development. Debugging, optimisation, and restructuring of the code is still in progress. Anyone interested in collaboration or using the code is encouraged to contact the author.
 

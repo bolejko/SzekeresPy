@@ -1,5 +1,5 @@
 !########################################################################################################
-! SzekeresPy ver. 0.4 - Python package for cosmological calculations using the Szekeres Cosmological Model
+! SzekeresPy ver. 0.41 - Python package for cosmological calculations using the Szekeres Cosmological Model
 ! 
 ! File: szekeres_fortran.f90
 ! 
@@ -191,7 +191,7 @@ subroutine link_multi(input_data,rho,tht,shr,wey,ric,arl,prp)
     
 end subroutine link_multi
 
-!------------------------------------
+
 !------------------------------------
 subroutine link_cube(input_data,rho,tht,shr,wey,ric,com,prp)
     implicit none
@@ -372,7 +372,6 @@ subroutine link_temperature(INTERFACE_FIX_REQUIRED,ND,input_data,temperature,rma
     dmax = DEC(imax-1)
 
 
-   ! call invrotmap(RA,DEC,Lmax,Bmax,lt,bt)
 
 
 
@@ -397,7 +396,7 @@ subroutine link_density(INTERFACE_FIX_REQUIRED,ND,input_data,density,expansion,s
     double precision, dimension(npoint)  :: point,direction
     double precision, dimension(npoint)  :: szpoint,szdirection    
     double precision, dimension(0:5) :: tempi
-    double precision :: age,dav,zlim
+    double precision :: age,dav,zlim,RAi,DECi,Lmax,Bmax,lt,bt
 
     double precision, dimension (100) :: szpac  
     INTERFACE_FIX_REQUIRED = 1 
@@ -424,18 +423,28 @@ subroutine link_density(INTERFACE_FIX_REQUIRED,ND,input_data,density,expansion,s
     direction(1:7)  =  input_data(N1:N2)
 
 
+    Lmax = pyszek(12)
+    Bmax = pyszek(13)
+
+
     call parameter_values(npypac,pypac,npyszek,pyszek,szpac)
     call age_from_initial(szpac)
     age = szpac(10)
 
 !$OMP PARALLEL DO DEFAULT(NONE) &
-!$OMP PRIVATE(ig,szpac,szpoint,szdirection,zlim,tempi) &
-!$OMP SHARED(ngrid,RA,DEC,pypac,pyszek,point,age,density,expansion,shear,weyl)
+!$OMP PRIVATE(ig,szpac,szpoint,szdirection,RAi,DECi,lt,bt,zlim,tempi) &
+!$OMP SHARED(ngrid,RA,DEC,pypac,pyszek,point,Lmax,Bmax,age,density,expansion,shear,weyl)
     do ig=0,ngrid-1
 
         szpoint = point
-        szdirection(1) = RA(ig)
-        szdirection(2) = DEC(ig)
+
+        RAi = RA(ig)
+        DECi = DEC(ig)
+ 
+      !  call invrotmap(RAi,DECi,Lmax,Bmax,lt,bt)
+        call norotmap(RAi,DECi,Lmax,Bmax,lt,bt)
+        szdirection(1) = lt
+        szdirection(2) = bt
         szpac(100) = 2
         szpac(10)  = age 
         zlim = point(5)
@@ -552,6 +561,8 @@ subroutine rho_map(zlim,szpac,npoint,point,direction,tempi)
     double precision, dimension(npoint) :: point, direction    
     double precision, dimension(0:5), intent(out) :: tempi
     double precision, dimension(0:3)   :: PV,PVi,PVii,NV,NVi,NVii,AV
+    double precision, dimension(0:5)   :: FV,FVi,FVii
+    double precision, dimension(4,0:5) :: FRK    
     double precision, dimension(4,0:3) :: PRK,NRK
     integer :: Ui,I,J,iz
     double precision,dimension(0:10) :: yp,yp1,yp2,yp3
@@ -580,8 +591,8 @@ subroutine rho_map(zlim,szpac,npoint,point,direction,tempi)
     F = 0.0
     F(6) = szpac(87)*szpac(23)
     F(7) = szpac(88)*szpac(21)
-    F(8) = szpac(88)*szpac(21)
-    F(9) = szpac(88)*szpac(23)
+    F(8) = szpac(89)*szpac(21)
+    F(9) = szpac(90)*szpac(23)
 
     Fi = F; Fii = F
 
@@ -637,11 +648,11 @@ subroutine rho_map(zlim,szpac,npoint,point,direction,tempi)
     D(4) = szpac(81)*1d-3
 
 ! FIX needed, the following is for testing only, should be replaced with proper integration
-    F(6) =  F(6)  + ds*szpac(87)*szpac(23)
-    F(7) =  F(7)  + ds*szpac(88)*szpac(21)
-    F(8) =  F(8)  + ds*szpac(88)*szpac(21)
-    F(9) =  F(9)  + ds*szpac(88)*szpac(23)
-    F(10) = F(10) + ds
+    F(6) =  F(6)  + NV(0)*ds*szpac(87)*szpac(23)
+    F(7) =  F(7)  + NV(0)*ds*szpac(88)*szpac(21)
+    F(8) =  F(8)  + NV(0)*ds*szpac(89)*szpac(21)
+    F(9) =  F(9)  + NV(0)*ds*szpac(90)*szpac(23)
+    F(10) = F(10) + NV(0)*ds
 
     t = PV(0)
     z = abs(NV(0)) - 1.0
@@ -1066,6 +1077,7 @@ subroutine light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
     implicit none
     double precision,  intent(inout), dimension (100) :: szpac 
     double precision, dimension(0:3), intent(in) :: PV,NV
+    double precision, dimension(0:5) :: FV    
     double precision, dimension(0:3), intent(out) :: AV 
     double precision, dimension(0:3,0:3)   :: GIJ
     double precision, dimension(0:3,0:3,0:3) :: GAM
@@ -1092,6 +1104,7 @@ subroutine light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
         enddo
     enddo   
 
+    FV=0d0
   
     ADA = -5d-1*szpac(87)*(NV(0)*NV(0))*DA
   
@@ -2117,6 +2130,13 @@ subroutine szekeres_specifics(szpac,r)
 
 end subroutine szekeres_specifics
 !--------------------------------------------------
+
+subroutine norotmap(ra,dec,Lmaxi,Bmaxi,l,b)
+    implicit none
+    double precision ra,dec,Lmaxi,Bmaxi,l,b
+    l=ra
+    b=dec
+end subroutine norotmap
 !--------------------------------------------------
 subroutine invrotmap(ra,dec,Lmaxi,Bmaxi,l,b)
 
@@ -2125,10 +2145,15 @@ subroutine invrotmap(ra,dec,Lmaxi,Bmaxi,l,b)
     double precision Lmax,Bmax,lcmb,bcmb,x,y,z,DV(4),DA(4)
     double precision ex,ey,ez
     double precision l,b,rai,deci
+    logical :: rotate,anitrotate
+
+    rotate = .False.
+    anitrotate = .not.rotate
+     
 
     pi = 4d0*datan(1d0)
     pi180 = pi/180.0d0
-    rai = (ra)*pi180
+    rai = ra*pi180
     deci = dec*pi180
 
     DV(2) = dsin(deci)
@@ -2140,23 +2165,38 @@ subroutine invrotmap(ra,dec,Lmaxi,Bmaxi,l,b)
     
     lcmb  = 276.4d0*pi180
     bcmb = 29.3d0*pi180
-        x = DV(2)
-        y = DV(3)
-        z = DV(4)
+        z = DV(2)
+        x = DV(3)
+        y = DV(4)
 
 ! Rotate OZ(-Lmax) then R-OY(+Bmax) then R-OY(-bcmb) then R-OZ(+lcmb):
 ! ANTI-Rotate: R-OZ(-lcmb), then R-OY(+bcmb), then R-OY(-Bmax), then OZ(+Lmax)
-    call rotxyz(3,-lcmb,DV,DA)
-        DV=DA
-    call rotxyz(2,+bcmb,DV,DA)
-        DV=DA
-    call rotxyz(2,-Bmax,DV,DA)
-        DV=DA
-    call rotxyz(3,+Lmax,DV,DA)
 
-    ez = DA(4)
-    ey = DA(3)
-    ex = DA(2)
+    if (anitrotate) then
+        call rotxyz(3,-lcmb,DV,DA)
+            DV=DA
+        call rotxyz(2,-bcmb,DV,DA)
+            DV=DA
+        call rotxyz(2,+Bmax,DV,DA)
+            DV=DA
+        call rotxyz(3,+Lmax,DV,DA)
+    endif
+
+    if (rotate) then
+            call rotxyz(3,-Lmax,DV,DA)
+            DV=DA
+        call rotxyz(2,+Bmax,DV,DA)
+            DV=DA
+        call rotxyz(2,-bcmb,DV,DA)
+            DV=DA
+        call rotxyz(3,lcmb,DV,DA)
+    endif
+
+
+    ez = DA(2)
+    ex = DA(3)
+    ey = DA(4)
+
 
     if(ez.ge.0d0) b = dasin(dabs(ez))
     if(ez.le.0d0) b = -dasin(dabs(ez)) 

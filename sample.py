@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.4 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.41 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: sample.py
 # 
@@ -242,7 +242,7 @@ plt.show()
 # depending on a machine could be more than 10 minutes (if run without openmp)
 # if you have time to run it, change the flag below to True
 
-run_example_10 = True
+run_example_10 = False
 
 r =35.0 
 theta = 0.4*np.pi   
@@ -260,4 +260,6 @@ if run_example_10:
     hp.mollview(density_map,title="Density contrast along the line of sight (normalised)")
     plt.show()
     hp.mollview(expansion_map,title="Expansion rate along the line of sight (normalised)")
+    plt.show()
+    hp.mollview(weyl_map,title="Weyl curvature along the line of sight (normalised)")
     plt.show()

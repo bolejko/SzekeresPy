@@ -1,5 +1,5 @@
 !########################################################################################################
-! SzekeresPy ver. 0.41 - Python package for cosmological calculations using the Szekeres Cosmological Model
+! SzekeresPy ver. 0.42 - Python package for cosmological calculations using the Szekeres Cosmological Model
 ! 
 ! File: szekeres_fortran.f90
 ! 
@@ -93,22 +93,15 @@ subroutine link_point(input_data,rho,tht,shr,wey,ric,arl,prp)
     double precision,  dimension (10) :: fluid
     double precision, intent(out) :: rho,tht,shr,wey,ric,arl,prp
 
-    rho = 0.0d0
-    tht = 0.0d0
-    shr = 0.0d0
-    wey = 0.0d0
-    ric = 0.0d0
-    ric = 0.0d0
-    arl = 0.0d0
-    prp = 0.0d0
-    ngrid000 = int(input_data(0))
+
+    ngrid000 = int(input_data(0))  
     pypac(1:15)  =  input_data(1:15)
     pyszek(1:15) =  input_data(16:30)
     point(1:7)  =  input_data(31:37)
     redshift = point(5) 
     szpac(100) = 2
     call parameter_values(npypac,pypac,npyszek,pyszek,szpac)
-    call age_from_initial(szpac)
+    call age_initial(szpac)
     call time_evolution(szpac,redshift,time)
     point(6) = time
     szpac(100) = 5.0
@@ -123,6 +116,9 @@ subroutine link_point(input_data,rho,tht,shr,wey,ric,arl,prp)
     
 
 end subroutine link_point
+
+
+
 !------------------------------------
 subroutine link_multi(input_data,rho,tht,shr,wey,ric,arl,prp)
     implicit none
@@ -137,7 +133,7 @@ subroutine link_multi(input_data,rho,tht,shr,wey,ric,arl,prp)
     double precision, dimension(npyszek) :: pyszek   
     double precision, dimension(npoint)  :: point
     double precision, dimension (npoint) :: szpoint    
-    double precision :: redshift,time,age
+    double precision :: redshift,time,ageTO, ageFROM
     double precision, dimension (100) :: szpac  
     double precision,  dimension (10) :: fluid
     double precision, dimension (0:(ngrid-1)), intent(out) :: rho,tht,shr,wey,ric,arl,prp
@@ -158,14 +154,15 @@ subroutine link_multi(input_data,rho,tht,shr,wey,ric,arl,prp)
     redshift = point(5) 
     szpac(100) = 2
     call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
-    call age_from_initial(szpac)
+    call age_initial(szpac)
     call time_evolution(szpac,redshift,time)
-    age = szpac(10)
+    ageFROM = szpac(33)
+    ageTO = szpac(34)
     
     
 !$OMP PARALLEL DO DEFAULT(NONE) &
 !$OMP PRIVATE(ig,szpac,szpoint,fluid) &
-!$OMP SHARED(pypac,pyszek,point,dr,redshift,time,age,rho,tht,shr,wey,ric,arl,prp)
+!$OMP SHARED(pypac,pyszek,point,dr,redshift,time,ageTO,ageFROM,rho,tht,shr,wey,ric,arl,prp)
     do ig=0,ngrid-1
         szpoint(1) = point(1)
         szpoint(2) = (ig+1)*dr
@@ -174,7 +171,8 @@ subroutine link_multi(input_data,rho,tht,shr,wey,ric,arl,prp)
         szpoint(5) = redshift
         szpoint(6) = time
         szpoint(7) = 1.0
-        szpac(10)  = age  
+        szpac(33)  = ageFROM
+        szpac(34)  = ageTO
         szpac(100) = 5.0
         call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
         call fluid_variables(szpac,npoint,szpoint,fluid)
@@ -210,7 +208,7 @@ subroutine link_cube(input_data,rho,tht,shr,wey,ric,com,prp)
     double precision, dimension(npyszek) :: pyszek   
     double precision, dimension(npoint)  :: point
     double precision, dimension (npoint) :: szpoint    
-    double precision :: redshift,time,age
+    double precision :: redshift,time,ageTO, ageFROM
     double precision, dimension (100) :: szpac  
     double precision,  dimension (10) :: fluid
     double precision, dimension (0:npix-1), intent(out) :: rho,tht,shr,wey,ric
@@ -232,14 +230,15 @@ subroutine link_cube(input_data,rho,tht,shr,wey,ric,com,prp)
     redshift = point(5) 
     szpac(100) = 2
     call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
-    call age_from_initial(szpac)
+    call age_initial(szpac)
     call time_evolution(szpac,redshift,time)
-    age = szpac(10)
+    ageFROM = szpac(33)
+    ageTO = szpac(34)
     ib = 0
 
 !$OMP PARALLEL DO DEFAULT(NONE) &
 !$OMP PRIVATE(igx,igy,igz,ib,x,y,z,xshift,yshift,zshift,r,szpac,szpoint,fluid) &
-!$OMP SHARED(pypac,pyszek,point,dr,redshift,time,age,rho,tht,shr,wey,ric,com,prp)
+!$OMP SHARED(pypac,pyszek,point,dr,redshift,time,ageTO, ageFROM,rho,tht,shr,wey,ric,com,prp)
     do igx=-nbox,nbox
         do igy=-nbox,nbox
             do igz=-nbox,nbox
@@ -257,7 +256,8 @@ subroutine link_cube(input_data,rho,tht,shr,wey,ric,com,prp)
         szpoint(5) = redshift
         szpoint(6) = time
         szpoint(7) = 1.0
-        szpac(10)  = age  
+        szpac(33)  = ageFROM
+        szpac(34)  = ageTO
         szpac(100) = 5.0
         call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
         call fluid_variables(szpac,npoint,szpoint,fluid)
@@ -297,15 +297,15 @@ subroutine link_cube(input_data,rho,tht,shr,wey,ric,com,prp)
     
 end subroutine link_cube
 !------------------------------------
-subroutine link_temperature(INTERFACE_FIX_REQUIRED,ND,input_data,temperature,rmax,dmax)
+
+subroutine link_temperature(ND,input_data,temperature,rmax,dmax)
     implicit none
-    integer :: INTERFACE_FIX_REQUIRED
+
     integer, intent(in) :: ND
     double precision, dimension(0:ND-1), intent(in) :: input_data
-
     double precision, dimension (0:((ND-45)/2)-1), intent(out) :: temperature
     double precision, intent(out) :: rmax,dmax
-    
+   
     double precision, dimension (0:((ND-45)/2)-1) :: RA,DEC
     integer, parameter :: npypac = 15
     integer, parameter :: npyszek = 15
@@ -316,12 +316,14 @@ subroutine link_temperature(INTERFACE_FIX_REQUIRED,ND,input_data,temperature,rma
     double precision, dimension(npoint)  :: point,direction
     double precision, dimension(npoint)  :: szpoint,szdirection    
     double precision, dimension(0:5) :: tempi
-    double precision :: age,tav
+    double precision :: ageTO, ageFROM,tav
     double precision, dimension (100) :: szpac  
-    INTERFACE_FIX_REQUIRED = 1 
+ 
     szpac(100) = 2
+
     ngrid = int(input_data(0))
 
+  
     if(ngrid.ne.((ND-45)/2)) then
         print *, "Number of data: Python->Fortran error [Error 45-T]"
         stop
@@ -343,19 +345,21 @@ subroutine link_temperature(INTERFACE_FIX_REQUIRED,ND,input_data,temperature,rma
 
 
     call parameter_values(npypac,pypac,npyszek,pyszek,szpac)
-    call age_from_initial(szpac)
-    age = szpac(10)
+    call age_initial(szpac)
+    ageFROM = szpac(33)
+    ageTO = szpac(34)
 
 !$OMP PARALLEL DO DEFAULT(NONE) &
 !$OMP PRIVATE(ig,szpac,szpoint,szdirection,tempi) &
-!$OMP SHARED(ngrid,RA,DEC,pypac,pyszek,point,age,temperature)
+!$OMP SHARED(ngrid,RA,DEC,pypac,pyszek,point,ageTO,ageFROM,temperature)
     do ig=0,ngrid-1
 
         szpoint = point
         szdirection(1) = RA(ig)
         szdirection(2) = DEC(ig)
         szpac(100) = 2
-        szpac(10)  = age 
+        szpac(33)  = ageFROM
+        szpac(34)  = ageTO
 
         call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
         call cmb_temperature(szpac,npoint,szpoint,szdirection,tempi)
@@ -370,8 +374,6 @@ subroutine link_temperature(INTERFACE_FIX_REQUIRED,ND,input_data,temperature,rma
     imax= maxloc(temperature,1)
     rmax = RA(imax-1)
     dmax = DEC(imax-1)
-
-
 
 
 
@@ -396,7 +398,7 @@ subroutine link_density(INTERFACE_FIX_REQUIRED,ND,input_data,density,expansion,s
     double precision, dimension(npoint)  :: point,direction
     double precision, dimension(npoint)  :: szpoint,szdirection    
     double precision, dimension(0:5) :: tempi
-    double precision :: age,dav,zlim,RAi,DECi,Lmax,Bmax,lt,bt
+    double precision :: ageTO, ageFROM,dav,zlim,RAi,DECi,Lmax,Bmax,lt,bt
 
     double precision, dimension (100) :: szpac  
     INTERFACE_FIX_REQUIRED = 1 
@@ -423,33 +425,37 @@ subroutine link_density(INTERFACE_FIX_REQUIRED,ND,input_data,density,expansion,s
     direction(1:7)  =  input_data(N1:N2)
 
 
-    Lmax = pyszek(12)
-    Bmax = pyszek(13)
+    Lmax = pyszek(9)
+    Bmax = pyszek(10)
 
 
     call parameter_values(npypac,pypac,npyszek,pyszek,szpac)
-    call age_from_initial(szpac)
-    age = szpac(10)
+    call age_initial(szpac)
+    ageFROM = szpac(33)
+    ageTO = szpac(34)
 
 !$OMP PARALLEL DO DEFAULT(NONE) &
 !$OMP PRIVATE(ig,szpac,szpoint,szdirection,RAi,DECi,lt,bt,zlim,tempi) &
-!$OMP SHARED(ngrid,RA,DEC,pypac,pyszek,point,Lmax,Bmax,age,density,expansion,shear,weyl)
+!$OMP SHARED(ngrid,RA,DEC,pypac,pyszek,point,Lmax,Bmax,ageTO, ageFROM,density,expansion,shear,weyl)
     do ig=0,ngrid-1
 
         szpoint = point
 
-        RAi = RA(ig)
-        DECi = DEC(ig)
- 
-      !  call invrotmap(RAi,DECi,Lmax,Bmax,lt,bt)
-        call norotmap(RAi,DECi,Lmax,Bmax,lt,bt)
-        szdirection(1) = lt
-        szdirection(2) = bt
+
+        szdirection(1) = RA(ig)
+        szdirection(2) = DEC(ig)
+
+        szpac(41) = Lmax*szpac(44) 
+        szpac(42) = Bmax*szpac(44)  
+        szpac(91) = point(7)
+
+
         szpac(100) = 2
-        szpac(10)  = age 
+        szpac(33)  = ageFROM
+        szpac(34)  = ageTO
         zlim = point(5)
         call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
-        call rho_map(zlim,szpac,npoint,szpoint,szdirection,tempi)
+        call los_map(zlim,szpac,npoint,szpoint,szdirection,tempi)
 
         density(ig) = tempi(1)
         expansion(ig) = tempi(2)
@@ -504,7 +510,7 @@ subroutine link_null(INTERFACE_FIX_REQUIRED,ND,input_data,temporal,radial,thetal
     direction(1:7)  =  input_data(N1:N2)
 
     call parameter_values(npypac,pypac,npyszek,pyszek,szpac)
-    call age_from_initial(szpac)
+    call age_initial(szpac)
     call null_geodesic(szpac,npoint,point,direction,ngrid,redshiftal,temporal,radial,thetal,phial,extral)
     
 end subroutine link_null
@@ -546,7 +552,7 @@ subroutine link_distance(INTERFACE_FIX_REQUIRED,ND,input_data,distance)
     direction(1:7)  =  input_data(N1:N2)
 
     call parameter_values(npypac,pypac,npyszek,pyszek,szpac)
-    call age_from_initial(szpac)
+    call age_initial(szpac)
     call angular_distance(szpac,npoint,point,direction,ngrid,redshiftal,distance)
     
 end subroutine link_distance
@@ -554,15 +560,13 @@ end subroutine link_distance
 !------------------------------------
 
 
-subroutine rho_map(zlim,szpac,npoint,point,direction,tempi)
+subroutine los_map(zlim,szpac,npoint,point,direction,tempi)
     implicit none
     double precision,  dimension (100) :: szpac  
     integer, intent(in) :: npoint
     double precision, dimension(npoint) :: point, direction    
     double precision, dimension(0:5), intent(out) :: tempi
-    double precision, dimension(0:3)   :: PV,PVi,PVii,NV,NVi,NVii,AV
-    double precision, dimension(0:5)   :: FV,FVi,FVii
-    double precision, dimension(4,0:5) :: FRK    
+    double precision, dimension(0:3)   :: PV,PVi,PVii,NV,NVi,NVii,AV  
     double precision, dimension(4,0:3) :: PRK,NRK
     integer :: Ui,I,J,iz
     double precision,dimension(0:10) :: yp,yp1,yp2,yp3
@@ -610,7 +614,8 @@ subroutine rho_map(zlim,szpac,npoint,point,direction,tempi)
 
 ! FIX needed:  safegaurd for orgin-crossing
 
-        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+ 
         do J=0,3
         PRK(1,J) = NV(J)*ds
         NRK(1,J) = AV(J)*ds
@@ -618,7 +623,8 @@ subroutine rho_map(zlim,szpac,npoint,point,direction,tempi)
         NV(J) = NVi(J) + 0.5*NRK(1,J)
         enddo
 
-        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+         
         do J=0,3
         PRK(2,J) = NV(J)*ds
         NRK(2,J) = AV(J)*ds
@@ -626,7 +632,8 @@ subroutine rho_map(zlim,szpac,npoint,point,direction,tempi)
         NV(J) = NVi(J) + 0.5*NRK(2,J)
         enddo
 
-        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+         
         do J=0,3
         PRK(3,J) = NV(J)*ds
         NRK(3,J) = AV(J)*ds
@@ -634,7 +641,8 @@ subroutine rho_map(zlim,szpac,npoint,point,direction,tempi)
         NV(J) = NVi(J) + NRK(3,J)
         enddo
 
-        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+         
         do J=0,3
         PRK(4,J) = NV(J)*ds
         NRK(4,J) = AV(J)*ds
@@ -644,7 +652,8 @@ subroutine rho_map(zlim,szpac,npoint,point,direction,tempi)
 
 
 ! FIX needed: adjust the step to the grid
-    call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+
     D(4) = szpac(81)*1d-3
 
 ! FIX needed, the following is for testing only, should be replaced with proper integration
@@ -690,7 +699,7 @@ subroutine rho_map(zlim,szpac,npoint,point,direction,tempi)
 
     enddo
 
-end subroutine rho_map
+end subroutine los_map
 !----------------------------------------------
 
 
@@ -715,7 +724,7 @@ subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
     f16 = 1.0d0/6.0d0
     iz = 0
     Ui = 100000
-    dss = 100.d0
+    dss = 150.d0
     ds = dss
     rmin = 12.0
     tlim = -2.0d0**18
@@ -739,10 +748,11 @@ subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
 
     do I=1,Ui
 
-        if(PV(1).le.rmin) ds = 0.001 + dss*(abs(PV(1)/rmin))
+        if(PV(1).le.rmin) ds = 0.01 + dss*(abs(PV(1)/rmin))
         if(PV(1).ge.rmin) ds = dss
 
-        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+ 
         do J=0,3
         PRK(1,J) = NV(J)*ds
         NRK(1,J) = AV(J)*ds
@@ -750,7 +760,8 @@ subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
         NV(J) = NVi(J) + 0.5*NRK(1,J)
         enddo
 
-        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+         
         do J=0,3
         PRK(2,J) = NV(J)*ds
         NRK(2,J) = AV(J)*ds
@@ -758,7 +769,8 @@ subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
         NV(J) = NVi(J) + 0.5*NRK(2,J)
         enddo
 
-        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+         
         do J=0,3
         PRK(3,J) = NV(J)*ds
         NRK(3,J) = AV(J)*ds
@@ -766,7 +778,8 @@ subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
         NV(J) = NVi(J) + NRK(3,J)
         enddo
 
-        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+         
         do J=0,3
         PRK(4,J) = NV(J)*ds
         NRK(4,J) = AV(J)*ds
@@ -776,7 +789,8 @@ subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
 
 
 ! FIX needed: adjust the step to the grid
-    call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+
     D(4) = szpac(81)*1d-3
 
     F(6) =  F(6)  + ds*szpac(87)*szpac(23)
@@ -867,7 +881,8 @@ subroutine angular_distance(szpac,npoint,point,direction,ngrid,redshiftal,distan
         if(PV(1).le.rmin) ds = 0.001 + dss*(PV(1)/rmin)
         if(PV(1).ge.rmin) ds = dss
 
-        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+         
         do J=0,3
         PRK(1,J) = NV(J)*ds
         NRK(1,J) = AV(J)*ds
@@ -880,7 +895,8 @@ subroutine angular_distance(szpac,npoint,point,direction,ngrid,redshiftal,distan
         DA  = DAi +0.5d0*DRK(1)
 
 
-        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+         
         do J=0,3
         PRK(2,J) = NV(J)*ds
         NRK(2,J) = AV(J)*ds
@@ -894,7 +910,8 @@ subroutine angular_distance(szpac,npoint,point,direction,ngrid,redshiftal,distan
 
   
 
-        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+         
         do J=0,3
         PRK(3,J) = NV(J)*ds
         NRK(3,J) = AV(J)*ds
@@ -906,7 +923,8 @@ subroutine angular_distance(szpac,npoint,point,direction,ngrid,redshiftal,distan
         VDA = VDAi + VRK(3)
         DA  = DAi  + DRK(3)
 
-        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+ 
         do J=0,3
         PRK(4,J) = NV(J)*ds
         NRK(4,J) = AV(J)*ds
@@ -920,7 +938,7 @@ subroutine angular_distance(szpac,npoint,point,direction,ngrid,redshiftal,distan
 
    
 ! FIX needed: adjust the step to the grid
-    call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
     D(4) = szpac(81)*1d-3
     D(5) = DA
 
@@ -981,9 +999,9 @@ subroutine null_geodesic(szpac,npoint,point,direction,ngrid,redshiftal,temporal,
     f16 = 1.0d0/6.0d0
     iz = 0
     Ui = 100000
-    dss = 100.d0
+    dss =100.d0
     ds = dss
-    rmin = 5.0
+    rmin = 15.0
 
     ! FIX needed: adaptive step
 
@@ -1000,7 +1018,8 @@ subroutine null_geodesic(szpac,npoint,point,direction,ngrid,redshiftal,temporal,
         if(PV(1).le.rmin) ds = 0.001 + dss*(PV(1)/rmin)
         if(PV(1).ge.rmin) ds = dss
 
-        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+     
         do J=0,3
         PRK(1,J) = NV(J)*ds
         NRK(1,J) = AV(J)*ds
@@ -1008,7 +1027,8 @@ subroutine null_geodesic(szpac,npoint,point,direction,ngrid,redshiftal,temporal,
         NV(J) = NVi(J) + 0.5*NRK(1,J)
         enddo
 
-        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+      
         do J=0,3
         PRK(2,J) = NV(J)*ds
         NRK(2,J) = AV(J)*ds
@@ -1016,7 +1036,8 @@ subroutine null_geodesic(szpac,npoint,point,direction,ngrid,redshiftal,temporal,
         NV(J) = NVi(J) + 0.5*NRK(2,J)
         enddo
 
-        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+       
         do J=0,3
         PRK(3,J) = NV(J)*ds
         NRK(3,J) = AV(J)*ds
@@ -1024,7 +1045,8 @@ subroutine null_geodesic(szpac,npoint,point,direction,ngrid,redshiftal,temporal,
         NV(J) = NVi(J) + NRK(3,J)
         enddo
 
-        call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+
         do J=0,3
         PRK(4,J) = NV(J)*ds
         NRK(4,J) = AV(J)*ds
@@ -1034,10 +1056,15 @@ subroutine null_geodesic(szpac,npoint,point,direction,ngrid,redshiftal,temporal,
 
 
 ! FIX needed: adjust the step to the grid
-    call light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+        call  light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+
     D(4) = szpac(81)*1d-3
 
     z = abs(NV(0)) - 1.0
+    
+!    call red_test(szpac,PV,NV,null_test)
+    
+    
         if (z > redshiftal(iz) .and. I>1) then
             yp1(0:3) = PVii; yp1(4:5) = Dii(4:5)
             yp2(0:3) = PVi; yp2(4:5) = Di(4:5)
@@ -1073,17 +1100,18 @@ subroutine null_geodesic(szpac,npoint,point,direction,ngrid,redshiftal,temporal,
 
 end subroutine null_geodesic
 !------------------------------------
-subroutine light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
+subroutine  light_propagation(szpac,PV,NV,AV,DA,ADA,NT)
     implicit none
     double precision,  intent(inout), dimension (100) :: szpac 
-    double precision, dimension(0:3), intent(in) :: PV,NV
+    double precision, dimension(0:3) :: PV,NV
     double precision, dimension(0:5) :: FV    
     double precision, dimension(0:3), intent(out) :: AV 
     double precision, dimension(0:3,0:3)   :: GIJ
     double precision, dimension(0:3,0:3,0:3) :: GAM
     integer :: G,I,J
     double precision :: DA,ADA
-    double precision, intent(out) :: null_test
+    
+    double precision, intent(out) :: NT
 
     call christoffels2(szpac,PV,GIJ,GAM)
 
@@ -1096,13 +1124,12 @@ subroutine light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
         enddo
     enddo
 
+ 
 
-    null_test = 0.0
-    do I=0,3
-        do J=0,3
-            null_test = null_test + GIJ(I,J)*NV(I)*NV(J)
-        enddo
-    enddo   
+ 
+
+       call null_test(GIJ,NV,NT)  
+
 
     FV=0d0
   
@@ -1110,6 +1137,39 @@ subroutine light_propagation(szpac,PV,NV,AV,DA,ADA,null_test)
   
 
 end subroutine light_propagation
+!------------------------------------
+
+
+subroutine null_test(GIJ,NV,NT)
+    implicit none
+    double precision, dimension(0:3,0:3), intent(in)   :: GIJ
+    double precision, dimension(0:3), intent(in)   :: NV
+    double precision, intent(out) :: NT
+    integer :: I, J
+
+    NT = 0.0
+    do I=0,3
+        do J=0,3
+            NT = NT + GIJ(I,J)*NV(I)*NV(J)
+        enddo
+    enddo   
+
+end subroutine null_test
+
+!------------------------------------
+subroutine red_test(szpac,PV,NV,null_test)
+    implicit none
+    double precision,  intent(inout), dimension (100) :: szpac
+    double precision, dimension(0:3), intent(in)   :: PV,NV
+    double precision :: tflrw,zflrw,null_test,z
+  
+    z=abs(NV(0)) - 1.d0
+    tflrw = (szpac(33) + PV(0))*szpac(25)
+    call redshift_lcdm(szpac,tflrw ,zflrw)
+    print *, z, zflrw,z-zflrw,null_test
+
+end subroutine red_test
+
 !------------------------------------
 subroutine initial_conditions(szpac,npoint,point,direction,PV,NV)
     implicit none
@@ -1136,7 +1196,7 @@ subroutine null_initial(szpac,npoint,point,direction,NV)
     integer, intent(in) :: npoint    
     double precision, dimension (npoint), intent(in) :: point, direction 
     double precision, dimension(0:3,0:3) :: E
-    double precision, dimension(0:3) :: LV
+    double precision, dimension(0:3) :: LV,RV
     double precision, dimension(0:3), intent(out) :: NV
     integer :: I,J
     double precision :: RA,DEC,th,ph,epsilon_ang,epsilon_dir
@@ -1147,8 +1207,8 @@ subroutine null_initial(szpac,npoint,point,direction,NV)
 
     epsilon_dir = 1d-8; epsilon_ang = 1d-10
     717 continue
-    RA = direction(1)*szpac(33) + epsilon_ang
-    DEC = direction(2)*szpac(33) + epsilon_ang
+    RA = direction(1)*szpac(44) + epsilon_ang
+    DEC = direction(2)*szpac(44) + epsilon_ang
     th = point(3)
     ph = point(4)
     aRi   = szpac(80)
@@ -1183,6 +1243,9 @@ subroutine null_initial(szpac,npoint,point,direction,NV)
     LV(2) = cos(DEC)*cos(RA)
     LV(3) = cos(DEC)*sin(RA)
 
+    call direction_adjusment(szpac,LV,RV)
+
+
 ! vierbein:  e_A^alpha = E(A,alpha)
     E(0,0) = 1.0
     E(0,1) = 0.0
@@ -1205,7 +1268,7 @@ subroutine null_initial(szpac,npoint,point,direction,NV)
     do I=0,3
         NV(I) = 0.0
         do J=0,3
-            NV(I) = NV(I) + LV(J)*E(J,I)
+            NV(I) = NV(I) + RV(J)*E(J,I)
         enddo
     enddo
 
@@ -1214,8 +1277,8 @@ subroutine null_initial(szpac,npoint,point,direction,NV)
     N3 = NV(3)*aR*sth
 
     if (N1.le.epsilon_dir.and.(abs(N2).le.epsilon_dir.and.abs(N3).le.epsilon_dir)) then
-        epsilon_ang = epsilon_ang + 1d-3
-        if(epsilon_ang>2d-2) then
+        epsilon_ang = epsilon_ang + 1d-2
+        if(epsilon_ang>6d-2) then
             print *, "Initial condition problem, terminting [Error 717]"
             stop
         endif
@@ -1241,7 +1304,7 @@ subroutine christoffels2(szpac,PV,GIJ,GAM)
     double precision :: aR,aRt, aRr, aRrr, aRtr,aRtrr,aRi,aR2,rs1,rs2
     double precision :: sth,cth,sph,cph,sthi,sth2,n,nd,nr,ndr,mcth,mcth2
     double precision :: si,si2,si3,mk,mki,mki2,mksi,mns2,mnss,mns,nsc,nd2
-    double precision :: m,mr,mrr,k,kr,krr,q,qr,qrr,p,pr,prr,s,sr,srr,epr
+    double precision :: m,mi,mr,mrr,k,kr,krr,q,qr,qrr,p,pr,prr,s,sr,srr,epr
     double precision :: GW,GWi, g11_part_1, g11_part_2,denumerator,f13
     integer :: I,J,G,H
 
@@ -1270,7 +1333,8 @@ subroutine christoffels2(szpac,PV,GIJ,GAM)
     prr  = szpac(72) 
     s    = szpac(73) 
     sr   = szpac(74) 
-    srr  = szpac(75)  
+    srr  = szpac(75) 
+    mi = 1.0/m 
     si = 1.0/s
     si2 = si*si
     si3 = si2*si
@@ -1305,7 +1369,7 @@ subroutine christoffels2(szpac,PV,GIJ,GAM)
     szpac(87) = 2.0d0*(mr-3.0d0*m*epr)*aRi*aRi*denumerator
     szpac(88) = (aRtr + 2*aRt*aRr*aRi - 3.0d0*aRt*epr)*denumerator*f13
     szpac(89) = -(aRtr - aRt*aRr*aRi)*f13*denumerator
-    szpac(90) = m*(3*aRr - aR*mr*m)*f13*aRi*aRi*aRi*denumerator
+    szpac(90) = m*(3*aRr - aR*mr*mi)*f13*aRi*aRi*aRi*denumerator
 
 ! FIX required: above should be provided by a separate function/subroutine 
 
@@ -1777,15 +1841,17 @@ subroutine radial_proper_distance(szpac,point,npoint,aR,aRr,rpR)
     enddo
 rpR = rout
 end subroutine radial_proper_distance
+
+
+
+
 !--------------------------------------------------
 subroutine areal_evolution(szpac,PV)
     implicit none
-        
     double precision,  dimension (100) :: szpac  
     double precision, dimension(0:3), intent(in) :: PV
-
     integer :: I,Ni
-    double precision :: dti,dt,time
+    double precision :: dt,time
     double precision :: aR,aRt, aRr, aRrr, aRtr, aRtrr, aRi
     double precision :: q,qr,qrr,p,pr,prr,s,sr,srr
     double precision :: m,mr,mrr,k,kr,krr,l
@@ -1795,28 +1861,40 @@ subroutine areal_evolution(szpac,PV)
     double precision :: r,rp,rt
     double precision :: rr,rrp,rtr
     double precision :: rrr,rrrp,rtrr
+    double precision,dimension(3) :: yp,yp1,yp2,yp3
+    double precision :: xp,xp1,xp2,xp3,tp
 
-
-    time = szpac(10)  + PV(0)
+    time = szpac(33)  + PV(0) 
 
 ! FIX needed: adaptive step
 
-    dti = 1024.0
-    Ni = int( abs(time/dti) )
-    if(Ni.le.3) Ni = 3
-    l = szpac(26)
 
+    l = szpac(26)
     f13 = 1.0d0/3.0d0
     f16 = 0.5d0*f13
 
-    Ni = 256
+    Ni =8254
 
-    dt = time/(Ni*1.0d0)
+    tp = szpac(34)
+    dt = (time-tp)/(Ni*1.0d0)
 	
+
 
     r = PV(1)
     rr = 1.0d0
     rrr = 0.0d0
+ 
+
+    yp3(1) = r
+    yp3(2) = rr
+    yp3(3) = rrr
+    yp2 = yp3
+    yp1 = yp3
+    xp3 = tp
+    xp2 = tp
+    xp1 = tp
+
+
     
     call szekeres_specifics(szpac,r)
 
@@ -1836,13 +1914,19 @@ subroutine areal_evolution(szpac,PV)
     sr   = szpac(74) 
     srr  = szpac(75) 
     
+    rt = dsqrt(2.0d0*(m/r) - k + (l*f13)*r*r)
+    rtr = ((mr/r) - (m/(r**2))*rr - 0.5d0*kr +  (l*f13)*r*rr)/rt
+
 ! FIX needed: rt,rtr,rtrr -> into array (for adaptive step)
 
     do I=1,Ni
+
+
+      dt =  6d-2/(f13*(rtr/rr + 2.0*rt/r))
       rp = r
       rrp = rr
       rrrp = rrr
-      rt = dsqrt(2.0d0*(m/rp) - k + (l*f13)*rp*rp)
+      rt = dsqrt(2.0d0*(m/rp) - k + (l*f13)*rp*rp)     
       rtr = ((mr/rp) - (m/(rp**2))*rrp - 0.5d0*kr +  (l*f13)*rp*rrp)/rt
       rtrr = (mrr/rp)  - 2.0d0*(mr/(rp**2))*rrp - (m/(rp**2))*rrrp
       rtrr = rtrr + 2.0d0*(m/(rp**3))*(rrp**2) - 0.5d0*krr 
@@ -1887,15 +1971,38 @@ subroutine areal_evolution(szpac,PV)
       kr4   = dt*rt
       krr4  = dt*rtr
       krrr4 = dt*rtrr
-      rp   = r   + (kr1  +2.0d0*kr2  +2.0d0*kr3  +kr4)*f16 
-      rrp  = rr  + (krr1 +2.0d0*krr2 +2.0d0*krr3 +krr4)*f16
+      rp   = r   + (kr1  +2.0d0*kr2  +2.0d0*kr3  +kr4  )*f16 
+      rrp  = rr  + (krr1 +2.0d0*krr2 +2.0d0*krr3 +krr4 )*f16
       rrrp = rrr + (krrr1+2.0d0*krrr2+2.0d0*krrr3+krrr4)*f16
-      r   = rp
-      rr  = rrp
-      rrr = rrrp
-    enddo
+      
+    tp = tp + dt
+    if ( tp>time ) then
+        yp = 0.0d0
+        xp = time 
+        yp = yp + yp1*((xp - xp2)/(xp1-xp2))*((xp - xp3)/(xp1-xp3))
+        yp = yp + yp2*((xp - xp1)/(xp2-xp1))*((xp - xp3)/(xp2-xp3))
+        yp = yp + yp3*((xp - xp1)/(xp3-xp1))*((xp - xp2)/(xp3-xp2))
+       rp   =  yp(1)
+       rrp  =  yp(2)
+       rrrp =  yp(3) 
+       r   = rp
+       rr  = rrp
+       rrr = rrrp
+       exit
+    endif
 
-! FIX needed: adaptive step interpolation 
+    r   = rp
+    rr  = rrp
+    rrr = rrrp
+    yp1 = yp2
+    yp2 = yp3
+    yp3(1) = r
+    yp3(2) = rr
+    yp3(3) = rrr
+    xp1 = xp2
+    xp2 = xp3
+    xp3 = tp
+    enddo
 
     rt = sqrt(2.0d0*(m/rp) - k + (l*f13)*rp*rp)
     rtr = ((mr/rp) - (m/(rp**2))*rrp - 0.5d0*kr +  (l*f13)*rp*rrp)/rt
@@ -1920,10 +2027,9 @@ subroutine areal_evolution(szpac,PV)
     szpac(86) = aRtrr
 
 
-
-
 end subroutine areal_evolution
 !--------------------------------------------------
+
 
 subroutine look_back_time(szpac,redshift,time)
 ! calculates the lookback time, BUT....
@@ -1980,8 +2086,15 @@ subroutine time_evolution(szpac,redshift,time)
     double precision, intent(out) :: time
     double precision :: lookback
     call look_back_time(szpac,redshift,lookback)
-    time = szpac(10) + lookback
+    time = szpac(33) + lookback
 end subroutine time_evolution
+!--------------------------------------------------
+subroutine age_initial(szpac)
+    implicit none
+    double precision,  dimension (100) :: szpac  
+    call age_from_initial(szpac)
+    call age_to_initial(szpac)
+end subroutine age_initial
 !--------------------------------------------------
 subroutine age_from_initial(szpac)
     implicit none
@@ -1996,7 +2109,7 @@ subroutine age_from_initial(szpac)
     omega_radiation = szpac(7)
     omega_curvature = szpac(9)
     z_initial = szpac(30) 
-    Ni = 2048
+    Ni = 6048
     f16 = 1.0d0/6.0d0
     ti = 0d0
     t = ti
@@ -2029,17 +2142,69 @@ subroutine age_from_initial(szpac)
         ti = t
         ai = a
     enddo
-    szpac(10) = t 
+    szpac(33) = t 
     
 end subroutine age_from_initial
 !--------------------------------------------------
+subroutine age_to_initial(szpac)
+    implicit none
+    integer :: I,Ni
+    double precision,  dimension (100) :: szpac  
+    double precision :: omega_matter,omega_lambda,omega_curvature,omega_radiation
+    double precision :: Ho, Haa,da,af,ai,a,ia1,ia2,ia3,ia4
+    double precision :: z_initial,t_rk1,t_rk2,t_rk3,t_rk4,ti,t,f16
+    Ho = szpac(11)
+    omega_matter =  szpac(3)
+    omega_lambda =  szpac(2)
+    omega_radiation = szpac(7)
+    omega_curvature = szpac(9)
+    z_initial = szpac(30) 
+    Ni = 6048
+    f16 = 1.0d0/6.0d0
+    ti = 0d0
+    t = ti
+    af = 1.0d0/(z_initial + 1.0d0)
+    ai = 0.0d0+1d-8
+    da = (af-ai) / (Ni*1.0d0)
+    do I=1,Ni
+        a = ai 
+        ia1 = 1.0d0/a
+        ia2 = ia1*ia1
+        ia3 = ia2*ia1
+        ia4 = ia2*ia2
+        Haa=a*Ho*dsqrt(omega_radiation*ia4+omega_matter*ia3+omega_curvature*ia2+omega_lambda)
+        t_rk1 = da/Haa
+        a = ai + 5.0d-1*da
+        ia1 = 1.0d0/a
+        ia2 = ia1*ia1
+        ia3 = ia2*ia1
+        ia4 = ia2*ia2
+        Haa=a*Ho*dsqrt(omega_radiation*ia4+omega_matter*ia3+omega_curvature*ia2+omega_lambda)
+        t_rk2 = da/Haa
+        t_rk3 = da/Haa
+        a = ai + da
+        ia1 = 1.0d0/a
+        ia2 = ia1*ia1
+        ia3 = ia2*ia1
+        ia4 = ia2*ia2
+        Haa=a*Ho*dsqrt(omega_radiation*ia4+omega_matter*ia3+omega_curvature*ia2+omega_lambda)
+        t_rk4 = da/Haa
+        t = ti + f16*(t_rk1+2.0d0*(t_rk2+t_rk3)+t_rk4)
+        ti = t
+        ai = a
+    enddo
+    szpac(34) = t 
+    
+end subroutine age_to_initial
+!--------------------------------------------------
+
 subroutine redshift_lcdm(szpac,time,redshift)
     implicit none
     double precision,  dimension (100), intent(in) :: szpac  
     double precision, intent(in) :: time
     double precision, intent(out) :: redshift
     double precision :: ctt,lambda,rhoz,rhoi,zo
-    ctt = time*szpac(24)
+    ctt = time*szpac(24)    
     lambda =  szpac(26)
     rhoz = lambda/((sinh(ctt*(dsqrt(75d-2*lambda))))**2)
     rhoi = szpac(23)
@@ -2073,11 +2238,15 @@ subroutine szekeres_specifics(szpac,r)
     double precision :: p,pr,prr    
     double precision :: q,qr,qrr        
     double precision :: dta0,dta1,dta2,d0el,d1el,d2el
-    double precision :: r0,dlr,Ak,Am,amp,alpha
+    double precision :: r0,r5,dlr,Ak,Am,amp,alpha
 
     amp = szpac(51)
     r0 = szpac(52)
     dlr = szpac(53)*r0
+    r5 = r0*6.0
+  !  if(r>r5) amp = 0.0d0
+    
+    
     Am = (1.0d0/6.0d0)*szpac(31)
     Ak = (14.0d0/3.0d0)*Am
     dta0 = dtanh((r-r0)/(2.0d0*dlr))
@@ -2131,95 +2300,52 @@ subroutine szekeres_specifics(szpac,r)
 end subroutine szekeres_specifics
 !--------------------------------------------------
 
-subroutine norotmap(ra,dec,Lmaxi,Bmaxi,l,b)
+subroutine direction_adjusment(szpac,LV,RV)
     implicit none
-    double precision ra,dec,Lmaxi,Bmaxi,l,b
-    l=ra
-    b=dec
-end subroutine norotmap
+    double precision, intent(in), dimension (100) :: szpac     
+    double precision, dimension(0:3), intent(in) :: LV
+    double precision, dimension(0:3), intent(out) :: RV
+    double precision, dimension(0:3) :: DI,DF
+    double precision :: Lmax,Bmax,lcmb,bcmb,alpha
+
+    alpha = 1.05*szpac(45)
+    Lmax = szpac(41)
+    Bmax = szpac(42)
+    lcmb =  szpac(46)
+    bcmb =  szpac(47)
+
+    DF = LV
+
+    if( szpac(91) < 0) then
+        DI=DF
+        call rotxyz(3,-lcmb,DI,DF)   
+        DI=DF
+        call rotxyz(2,(bcmb-Bmax),DI,DF)
+        DI=DF
+        call rotxyz(3,Lmax,DI,DF)
+        DI=DF        
+        call rotdir(alpha,Lmax,Bmax,DI,DF)
+        RV = DF
+    else
+        RV = DF
+    endif
+
+
+end subroutine direction_adjusment
 !--------------------------------------------------
-subroutine invrotmap(ra,dec,Lmaxi,Bmaxi,l,b)
-
-    implicit none
-    double precision ra,dec,pi,pi180,Lmaxi,Bmaxi
-    double precision Lmax,Bmax,lcmb,bcmb,x,y,z,DV(4),DA(4)
-    double precision ex,ey,ez
-    double precision l,b,rai,deci
-    logical :: rotate,anitrotate
-
-    rotate = .False.
-    anitrotate = .not.rotate
-     
-
-    pi = 4d0*datan(1d0)
-    pi180 = pi/180.0d0
-    rai = ra*pi180
-    deci = dec*pi180
-
-    DV(2) = dsin(deci)
-    DV(3) = dcos(rai)*dcos(deci)
-    DV(4) = dsin(rai)*dcos(deci)
-	
-    Lmax = Lmaxi*pi180
-    Bmax = Bmaxi*pi180
-    
-    lcmb  = 276.4d0*pi180
-    bcmb = 29.3d0*pi180
-        z = DV(2)
-        x = DV(3)
-        y = DV(4)
-
-! Rotate OZ(-Lmax) then R-OY(+Bmax) then R-OY(-bcmb) then R-OZ(+lcmb):
-! ANTI-Rotate: R-OZ(-lcmb), then R-OY(+bcmb), then R-OY(-Bmax), then OZ(+Lmax)
-
-    if (anitrotate) then
-        call rotxyz(3,-lcmb,DV,DA)
-            DV=DA
-        call rotxyz(2,-bcmb,DV,DA)
-            DV=DA
-        call rotxyz(2,+Bmax,DV,DA)
-            DV=DA
-        call rotxyz(3,+Lmax,DV,DA)
-    endif
-
-    if (rotate) then
-            call rotxyz(3,-Lmax,DV,DA)
-            DV=DA
-        call rotxyz(2,+Bmax,DV,DA)
-            DV=DA
-        call rotxyz(2,-bcmb,DV,DA)
-            DV=DA
-        call rotxyz(3,lcmb,DV,DA)
-    endif
-
-
-    ez = DA(2)
-    ex = DA(3)
-    ey = DA(4)
-
-
-    if(ez.ge.0d0) b = dasin(dabs(ez))
-    if(ez.le.0d0) b = -dasin(dabs(ez)) 
-    if(ey.ge.0d0 .and. ex.ge.0d0) l = datan(dabs(ey/ex))
-    if(ey.ge.0d0 .and. ex.le.0d0) l = pi - datan(dabs(ey/ex))
-    if(ey.le.0d0 .and. ex.le.0d0) l = pi + datan(dabs(ey/ex))
-    if(ey.le.0d0 .and. ex.ge.0d0) l = 2*pi-(datan(dabs(ey/ex)))
-    if(ex.eq.0d0 .and. ey.gt.0d0) l = 0.5d0*pi
-    if(ex.eq.0d0 .and. ey.lt.0d0) l = 0.5d0*pi
-    if(ex.eq.0d0 .and. ey.eq.0d0) l = 0.0d0*pi
-    l=l/pi180
-    b=b/pi180
-
-end subroutine invrotmap
-!--------------------------------------------
 subroutine rotxyz(n,theta,ri,ro)
     implicit none
-    integer n
-    double precision ri(4),ro(4)
-    double precision xo,yo,zo,xi,yi,zi,theta
-        xi = ri(2)
-        yi = ri(3)
-        zi = ri(4)
+    integer, intent(in) :: n
+    double precision, intent(in) :: theta
+    double precision, intent(in) :: ri(0:3)
+    double precision, intent(out) :: ro(0:3)
+    double precision :: xo,yo,zo,xi,yi,zi
+        xi = ri(1)
+        yi = ri(2)
+        zi = ri(3)
+        xo = ri(1)
+        yo = ri(2)
+        zo = ri(3)        
         if(n.eq.1) then
             xo = xi
             yo = dcos(theta)*yi - dsin(theta)*zi
@@ -2234,11 +2360,43 @@ subroutine rotxyz(n,theta,ri,ro)
             xo = dcos(theta)*xi - dsin(theta)*yi
             yo = dsin(theta)*xi + dcos(theta)*yi
             zo = zi
-        endif
-            ro(2) = xo
-            ro(3) = yo
-            ro(4) = zo
+        endif      
+            ro(0) = ri(0)
+            ro(1) = xo
+            ro(2) = yo
+            ro(3) = zo
 end subroutine rotxyz
+!--------------------------------------------
+subroutine rotdir(alpha,Lmax,Bmax,DV,AV)
+    implicit none
+    double precision :: rtm(3,3),FD(0:3),DV(0:3),AV(0:3)
+    double precision :: Lmax,Bmax
+    double precision :: alpha
+    integer :: I,J
+    
+    FD(1) = dsin(Bmax)
+    FD(2) = dcos(Lmax)*dcos(Bmax)
+    FD(3) = dsin(Lmax)*dcos(Bmax)
+    rtm(1,1) = dcos(alpha) + FD(1)*FD(1)*(1.0d0-dcos(alpha))
+    rtm(1,2) = FD(1)*FD(2)*(1.0d0-dcos(alpha))-FD(3)*dsin(alpha)
+    rtm(1,3) = FD(1)*FD(3)*(1.0d0-dcos(alpha))+FD(2)*dsin(alpha)
+    rtm(2,1) = FD(2)*FD(1)*(1.0d0-dcos(alpha))+FD(3)*dsin(alpha)
+    rtm(2,2) = dcos(alpha) + FD(2)*FD(2)*(1.0d0-dcos(alpha))
+    rtm(2,3) = FD(2)*FD(3)*(1.0d0-dcos(alpha))-FD(1)*dsin(alpha)
+    rtm(3,1) = FD(3)*FD(1)*(1.0d0-dcos(alpha))-FD(2)*dsin(alpha)
+    rtm(3,2) = FD(3)*FD(2)*(1.0d0-dcos(alpha))+FD(1)*dsin(alpha)
+    rtm(3,3) = dcos(alpha) + FD(3)*FD(3)*(1.0d0-dcos(alpha))
+	
+    AV = 0.0d0
+    do I=1,3
+       do J=1,3
+          AV(I) = AV(I) + rtm(I,J)*DV(J)
+       enddo
+    enddo
+    AV(0) = DV(0)
+	
+	
+end subroutine
 !--------------------------------------------
 
 subroutine parameter_names(print_names,szpac,szpan)
@@ -2301,7 +2459,10 @@ subroutine parameter_values(npypac,pypac, npyszek,pyszek, szpac)
     if(szpac(100) > 1.0) then
        H0 = pypac(1)
        omega_matter = pypac(2)
-       omega_lambda = pypac(3)    
+       omega_lambda = pypac(3)  
+       
+       omega_lambda = 1.0-omega_matter
+         
        contrast = pyszek(1)
        radius = pyszek(2)
        slope = pyszek(3)
@@ -2352,6 +2513,9 @@ subroutine parameter_values(npypac,pypac, npyszek,pyszek, szpac)
     w_baryon = omega_baryon/(little_h*little_h)
     w_cold = omega_cold/(little_h*little_h)  
 
+
+
+
     szpac(1) = H0
     szpac(2) = omega_lambda
     szpac(3) = omega_matter
@@ -2378,8 +2542,13 @@ subroutine parameter_values(npypac,pypac, npyszek,pyszek, szpac)
 
     szpac(30) = z_initial
     szpac(31) = gkr*( (1.0d0 + z_initial)**3)
-    szpac(32) = pi 
-    szpac(33) = pi/180.0d0
+
+
+    szpac(43) = 180.0/pi
+    szpac(44) = pi/180.0d0
+    szpac(45) = pi
+    szpac(46) = 276.4d0*szpac(44)
+    szpac(47) = 29.3d0*szpac(44)
   
 
     szpac(51) = contrast

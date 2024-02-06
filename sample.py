@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.41 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.42 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: sample.py
 # 
@@ -254,7 +254,7 @@ if run_example_10:
     cmb_map =  szekeres_cosmo.sky_map(observer) 
     hp.mollview(cmb_map,title="CMB sky in the Szekeres model")
     plt.show()
-
+    
     redshift = 0.02
     density_map, expansion_map, shear_map, weyl_map = szekeres_cosmo.column_density(observer,redshift)
     hp.mollview(density_map,title="Density contrast along the line of sight (normalised)")

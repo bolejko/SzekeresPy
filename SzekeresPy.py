@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.41 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.42 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: SzekeresPy.py
 # 
@@ -39,6 +39,9 @@ class Szekeres:
         self.side = self.box*2+1
         self.grid = (self.side)**3
         self.cube_data = np.zeros((4,self.grid))
+        
+        self.states = [[*self.cospar,*self.szpar]]
+        self.NSIDE = 16
   
     def All(self): #returns all values      
         return self.cospar,self.szpar
@@ -64,7 +67,7 @@ class Szekeres:
         return Odez  #returns omega_lambda
 	
 
-    def update(self,H0 = None, Om0 = None, Ode0 = None, dipole = None, silent = None):
+    def update(self,H0 = None, Om0 = None, Ode0 = None, dipole = None, contrast = None, silent = None):
         update_done = False
         if silent == None and not False:
             silent = True
@@ -96,7 +99,13 @@ class Szekeres:
                 print("dipole parameter updated to: ",dipole)
             self.szpar[3] = dipole
             update_done = True
-
+        if contrast == None:
+            pass
+        else:
+            if not silent:
+                print("contrast parameter updated to: ",contrast)
+            self.szpar[0] = contrast
+            update_done = True
 
 
         if update_done:
@@ -130,6 +139,21 @@ class Szekeres:
                 print("CUBE exists and ready to use:",a)
                 fortran_call_required = False
         return fortran_call_required
+            
+                        
+
+    def state_register(self):
+        x = [[*self.cospar,*self.szpar]]
+        self.states.append(x)
+        
+
+
+    def state_check(self):
+        current_state_not_held = True
+        state_i =  [[*self.cospar,*self.szpar]]
+        if state_i == self.states[-1]:
+            current_state_not_held = False
+        return current_state_not_held            
             
 
     def fluid(self,t,r,theta,phi,redshift):
@@ -403,7 +427,7 @@ class Szekeres:
         return light_ray
                
     def sky_map(self,obs):
-        NSIDE = 16
+        NSIDE = self.NSIDE
         NPIX = hp.nside2npix(NSIDE)
         m = np.arange(NPIX)
         # >> directions should be provided as:
@@ -416,6 +440,10 @@ class Szekeres:
         point = np.zeros(7)
         point = 0.0,obs[0],obs[1],obs[2],1,1,1
         direction = np.ones(7)
+        self.szpar[10]=obs[0]
+        self.szpar[11]=obs[1]
+        self.szpar[12]=obs[2]        
+
 
         input_data = NPIX*np.ones(1)
         input_data = np.append(input_data,RA)
@@ -426,14 +454,16 @@ class Szekeres:
         input_data = np.append(input_data,direction)
         ND= input_data.size
 
-        szekeres_cmb, rmax,dmax = fortran.link_temperature(ND,input_data)
-        self.szpar[11] = rmax
-        self.szpar[12] = dmax
-        self.szpar[13] = self.update_counter[0]
-                   
+        szekeres_cmb, rmax,dmax = fortran.link_temperature(input_data)
+        self.szpar[8] = rmax
+        self.szpar[9] = dmax
+        self.state_register()
+                  
+          
+               
 
-        rcmb = 276.4 - self.szpar[11]
-        dcmb = 29.3 - self.szpar[12]
+        rcmb = (276.4 - self.szpar[8])
+        dcmb = (29.3 - self.szpar[9])
 
         CMB_rot = hp.Rotator(rot=[rcmb , dcmb],deg=True, inv=True)
         temperature_map = CMB_rot.rotate_map_pixel(szekeres_cmb)
@@ -444,7 +474,15 @@ class Szekeres:
 
 
     def column_density(self,obs,redshift):
-        NSIDE =16
+    
+        self.szpar[10]=obs[0]
+        self.szpar[11]=obs[1]
+        self.szpar[12]=obs[2]        
+        
+        if self.state_check():
+            szekeres_cmb = self.sky_map(obs)
+        
+        NSIDE =self.NSIDE
         NPIX = hp.nside2npix(NSIDE)
         m = np.arange(NPIX)
         # >> directions should be provided as:
@@ -454,8 +492,9 @@ class Szekeres:
         # >> allow for the galactic coordinates: l[deg], b[deg]
         RA,DEC = hp.pix2ang(NSIDE,m,lonlat=True)
 
+        x = 1
         point = np.zeros(7)
-        point = 0.0,obs[0],obs[1],obs[2],redshift,1,1
+        point = 0.0,obs[0],obs[1],obs[2],redshift,1,x
         direction = np.ones(7)
 
         input_data = NPIX*np.ones(1)
@@ -467,40 +506,28 @@ class Szekeres:
         input_data = np.append(input_data,direction)
         ND= input_data.size
 
-
-        if self.szpar[13]  != self.update_counter[0]:
-            szekeres_cmb, rmax,dmax = fortran.link_temperature(ND,input_data)
-            self.szpar[11] = rmax
-            self.szpar[12] = dmax
-            self.szpar[13] = 1.0
-        
-        rmax = self.szpar[11] 
-        dmax =     self.szpar[12] 
-
-
         rho, tht, shr, wey   = fortran.link_density(ND,input_data)
-        rcmb = 276.4 - self.szpar[11]
-        dcmb = 29.3 - self.szpar[12]
-        CMB_rot = hp.Rotator(rot=[rcmb , dcmb],deg=True, inv=True)
-        density_map = CMB_rot.rotate_map_pixel(rho)
-        expansion_map = CMB_rot.rotate_map_pixel(tht)
-        shear_map = CMB_rot.rotate_map_pixel(shr)
-        weyl_map = CMB_rot.rotate_map_pixel(wey)
+        rcmb = 276.4 - self.szpar[8]
+        dcmb = 29.3 - self.szpar[9]
+        if x==-1:
+            density_map = rho
+            expansion_map = tht
+            shear_map = shr
+            weyl_map = wey
+        elif x==1:
+            CMB_rot = hp.Rotator(rot=[rcmb , dcmb],deg=True, inv=True)
+            density_map = CMB_rot.rotate_map_pixel(rho)
+            expansion_map = CMB_rot.rotate_map_pixel(tht)
+            shear_map = CMB_rot.rotate_map_pixel(shr)
+            weyl_map = CMB_rot.rotate_map_pixel(wey)
 
 
-      #  density_map = rho
-      #  expansion_map = tht
-      #  shear_map = shr
-      #  weyl_map = wey
 
 
 
 # FIX needed: the above is in the galactic coordinats, not equorial 
 
         return density_map, expansion_map, shear_map, weyl_map
-
-
-
 
 
 
@@ -586,3 +613,17 @@ def initiate(astropy_cosmo=None, inhomog_cosmo=None):
   return sz_cosmo         
 
 SzekeresModel = initiate()  
+
+
+
+
+
+# FIX needed: 
+# full specification requires
+#   - background cosmology
+#   - Szekeres parameters
+#   - Observer's locations, including orientation of the observer's sky
+#   - direction of light (array or float)
+#   - redshift (array or float)
+
+

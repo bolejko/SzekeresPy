@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.42 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.43 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: sample.py
 # 
@@ -248,7 +248,7 @@ r =35.0
 theta = 0.4*np.pi   
 phi = 0.5*np.pi
 observer = r, theta, phi
-szekeres_cosmo.update(dipole = 0.55)
+
 
 if run_example_10:
     cmb_map =  szekeres_cosmo.sky_map(observer) 

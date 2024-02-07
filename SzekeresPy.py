@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.42 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.43 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: SzekeresPy.py
 # 
@@ -438,7 +438,7 @@ class Szekeres:
         RA,DEC = hp.pix2ang(NSIDE,m,lonlat=True)
 
         point = np.zeros(7)
-        point = 0.0,obs[0],obs[1],obs[2],1,1,1
+        point = 0.0,obs[0],obs[1],obs[2],1,-1,0
         direction = np.ones(7)
         self.szpar[10]=obs[0]
         self.szpar[11]=obs[1]
@@ -454,14 +454,12 @@ class Szekeres:
         input_data = np.append(input_data,direction)
         ND= input_data.size
 
-        szekeres_cmb, rmax,dmax = fortran.link_temperature(input_data)
+        szekeres_cmb, rmax,dmax = fortran.link_temperature(ND,input_data)
         self.szpar[8] = rmax
         self.szpar[9] = dmax
         self.state_register()
                   
-          
-               
-
+   
         rcmb = (276.4 - self.szpar[8])
         dcmb = (29.3 - self.szpar[9])
 
@@ -491,12 +489,17 @@ class Szekeres:
         # >> allow for partial sky coverage:
         # >> allow for the galactic coordinates: l[deg], b[deg]
         RA,DEC = hp.pix2ang(NSIDE,m,lonlat=True)
-
-        x = 1
         point = np.zeros(7)
-        point = 0.0,obs[0],obs[1],obs[2],redshift,1,x
         direction = np.ones(7)
-
+        
+        sky_rotation  = 170.0     
+        arbitraty_rotation = True
+        
+        if arbitraty_rotation:
+            point = 0.0,obs[0],obs[1],obs[2],redshift,2.0,sky_rotation        
+        else: 
+            point = 0.0,obs[0],obs[1],obs[2],redshift,-1,0.0
+            
         input_data = NPIX*np.ones(1)
         input_data = np.append(input_data,RA)
         input_data = np.append(input_data,DEC)        
@@ -509,12 +512,12 @@ class Szekeres:
         rho, tht, shr, wey   = fortran.link_density(ND,input_data)
         rcmb = 276.4 - self.szpar[8]
         dcmb = 29.3 - self.szpar[9]
-        if x==-1:
+        if arbitraty_rotation:
             density_map = rho
             expansion_map = tht
             shear_map = shr
             weyl_map = wey
-        elif x==1:
+        else:
             CMB_rot = hp.Rotator(rot=[rcmb , dcmb],deg=True, inv=True)
             density_map = CMB_rot.rotate_map_pixel(rho)
             expansion_map = CMB_rot.rotate_map_pixel(tht)

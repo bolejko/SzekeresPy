@@ -1,5 +1,5 @@
 !########################################################################################################
-! SzekeresPy ver. 0.42 - Python package for cosmological calculations using the Szekeres Cosmological Model
+! SzekeresPy ver. 0.43 - Python package for cosmological calculations using the Szekeres Cosmological Model
 ! 
 ! File: szekeres_fortran.f90
 ! 
@@ -298,9 +298,9 @@ subroutine link_cube(input_data,rho,tht,shr,wey,ric,com,prp)
 end subroutine link_cube
 !------------------------------------
 
-subroutine link_temperature(ND,input_data,temperature,rmax,dmax)
+subroutine link_temperature(INTERFACE_FIX_REQUIRED,ND,input_data,temperature,rmax,dmax)
     implicit none
-
+    integer :: INTERFACE_FIX_REQUIRED
     integer, intent(in) :: ND
     double precision, dimension(0:ND-1), intent(in) :: input_data
     double precision, dimension (0:((ND-45)/2)-1), intent(out) :: temperature
@@ -318,7 +318,7 @@ subroutine link_temperature(ND,input_data,temperature,rmax,dmax)
     double precision, dimension(0:5) :: tempi
     double precision :: ageTO, ageFROM,tav
     double precision, dimension (100) :: szpac  
- 
+    INTERFACE_FIX_REQUIRED = 1 
     szpac(100) = 2
 
     ngrid = int(input_data(0))
@@ -353,33 +353,26 @@ subroutine link_temperature(ND,input_data,temperature,rmax,dmax)
 !$OMP PRIVATE(ig,szpac,szpoint,szdirection,tempi) &
 !$OMP SHARED(ngrid,RA,DEC,pypac,pyszek,point,ageTO,ageFROM,temperature)
     do ig=0,ngrid-1
-
         szpoint = point
-        szdirection(1) = RA(ig)
-        szdirection(2) = DEC(ig)
-        szpac(100) = 2
+        szpac(100) = 2.0
         szpac(33)  = ageFROM
         szpac(34)  = ageTO
-
+        szpac(91) = -1.0
+        szdirection(1) = RA(ig)
+        szdirection(2) = DEC(ig)
         call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
         call cmb_temperature(szpac,npoint,szpoint,szdirection,tempi)
         temperature(ig) = tempi(0)
-
     enddo   
 !$OMP END PARALLEL DO  
 
     tav = sum(temperature)/(1d0*(ngrid))
     temperature = 2.725d0*((temperature/tav)- 1.0d0)
-
     imax= maxloc(temperature,1)
     rmax = RA(imax-1)
     dmax = DEC(imax-1)
-
-
-
+    
 end subroutine link_temperature
-
-
 !------------------------------------
 subroutine link_density(INTERFACE_FIX_REQUIRED,ND,input_data,density,expansion,shear,weyl)
     implicit none
@@ -388,7 +381,6 @@ subroutine link_density(INTERFACE_FIX_REQUIRED,ND,input_data,density,expansion,s
     double precision, dimension(0:ND-1), intent(in) :: input_data
     double precision, dimension (0:((ND-45)/2)-1), intent(out) :: density,expansion,shear,weyl
     double precision, dimension (0:((ND-45)/2)-1) :: RA,DEC
-
     integer, parameter :: npypac = 15
     integer, parameter :: npyszek = 15
     integer, parameter :: npoint = 7
@@ -399,18 +391,14 @@ subroutine link_density(INTERFACE_FIX_REQUIRED,ND,input_data,density,expansion,s
     double precision, dimension(npoint)  :: szpoint,szdirection    
     double precision, dimension(0:5) :: tempi
     double precision :: ageTO, ageFROM,dav,zlim,RAi,DECi,Lmax,Bmax,lt,bt
-
     double precision, dimension (100) :: szpac  
     INTERFACE_FIX_REQUIRED = 1 
     szpac(100) = 2
     ngrid = int(input_data(0))
-
     if(ngrid.ne.((ND-45)/2)) then
         print *, "Number of data: Python->Fortran error [Error 45-DN]"
         stop
     endif
-
-
     N1 = 1;  N2 = (ND-45)/2
     RA = input_data(N1:N2)
     N1 = N2+1;  N2 = ND-45
@@ -424,10 +412,8 @@ subroutine link_density(INTERFACE_FIX_REQUIRED,ND,input_data,density,expansion,s
     N1 = N2+1; N2 = N1+7-1
     direction(1:7)  =  input_data(N1:N2)
 
-
     Lmax = pyszek(9)
     Bmax = pyszek(10)
-
 
     call parameter_values(npypac,pypac,npyszek,pyszek,szpac)
     call age_initial(szpac)
@@ -440,21 +426,24 @@ subroutine link_density(INTERFACE_FIX_REQUIRED,ND,input_data,density,expansion,s
     do ig=0,ngrid-1
 
         szpoint = point
-
-
-        szdirection(1) = RA(ig)
-        szdirection(2) = DEC(ig)
-
-        szpac(41) = Lmax*szpac(44) 
-        szpac(42) = Bmax*szpac(44)  
-        szpac(91) = point(7)
-
-
         szpac(100) = 2
         szpac(33)  = ageFROM
         szpac(34)  = ageTO
         zlim = point(5)
+        szdirection(1) = RA(ig)
+        szdirection(2) = DEC(ig)
+
         call parameter_values(npypac,pypac, npyszek,pyszek, szpac)
+        szpac(41) = Lmax*szpac(44) 
+        szpac(42) = Bmax*szpac(44)  
+        szpac(48) = point(7)*szpac(44)  
+        if(point(6) > 1.0) then
+           szpac(91) = +1.0
+        else
+           szpac(91) = -1.0
+        endif
+
+
         call los_map(zlim,szpac,npoint,szpoint,szdirection,tempi)
 
         density(ig) = tempi(1)
@@ -724,7 +713,7 @@ subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
     f16 = 1.0d0/6.0d0
     iz = 0
     Ui = 100000
-    dss = 150.d0
+    dss = 100.d0
     ds = dss
     rmin = 12.0
     tlim = -2.0d0**18
@@ -793,8 +782,7 @@ subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
 
     D(4) = szpac(81)*1d-3
 
-    F(6) =  F(6)  + ds*szpac(87)*szpac(23)
-    F(10) = F(10) + ds
+
 
     t = PV(0)
         if (t < tlim .and. I>1) then
@@ -812,9 +800,7 @@ subroutine cmb_temperature(szpac,npoint,point,direction,tempi)
             yp = yp + yp3*((xp - xp1)/(xp3-xp1))*((xp - xp2)/(xp3-xp2))
         
             tempi(0) = 1.0d0/abs(yp(0)) 
-            
-            tempi(1) = F(6)/F(10)
-
+ 
             exit
         endif
 
@@ -1205,7 +1191,7 @@ subroutine null_initial(szpac,npoint,point,direction,NV)
     double precision :: mk,mki,mkis,sna,snc
     double precision :: k,qr,pr,s,sr,si,W,Wi,N1,N2,N3
 
-    epsilon_dir = 1d-8; epsilon_ang = 1d-10
+    epsilon_dir = 1d-9; epsilon_ang = 1d-10
     717 continue
     RA = direction(1)*szpac(44) + epsilon_ang
     DEC = direction(2)*szpac(44) + epsilon_ang
@@ -2239,6 +2225,7 @@ subroutine szekeres_specifics(szpac,r)
     double precision :: q,qr,qrr        
     double precision :: dta0,dta1,dta2,d0el,d1el,d2el
     double precision :: r0,r5,dlr,Ak,Am,amp,alpha
+    double precision :: f13,k0,a0 
 
     amp = szpac(51)
     r0 = szpac(52)
@@ -2247,6 +2234,11 @@ subroutine szekeres_specifics(szpac,r)
   !  if(r>r5) amp = 0.0d0
     
     
+    f13 = 1.0/3.0d0
+    a0 = 1.0/(1.d0+szpac(30))
+    k0 = (f13*szpac(31) + f13*szpac(26)- szpac(32)*szpac(32))*a0*a0  
+    k0 = 0.0 
+    ! FIX needed: double check and simplification required
     Am = (1.0d0/6.0d0)*szpac(31)
     Ak = (14.0d0/3.0d0)*Am
     dta0 = dtanh((r-r0)/(2.0d0*dlr))
@@ -2261,6 +2253,10 @@ subroutine szekeres_specifics(szpac,r)
     k = Ak*d0el*r*r
     kr = Ak*d1el*r*r + 2.0*(k/r)
     krr = Ak*d2el*r*r + 2.0*Ak*d1el*r + 2.0*kr/r - 2.0*(k/(r*r))
+    k = k + k0*r*r
+    kr = kr + 2.0*k0*r
+    krr = krr + 2.0*k0
+! FIX needed: double check and simplification required
     alpha = szpac(54) 
     q = 1.0d0
     qr = 0.0d0
@@ -2308,7 +2304,7 @@ subroutine direction_adjusment(szpac,LV,RV)
     double precision, dimension(0:3) :: DI,DF
     double precision :: Lmax,Bmax,lcmb,bcmb,alpha
 
-    alpha = 1.05*szpac(45)
+    alpha = szpac(48)
     Lmax = szpac(41)
     Bmax = szpac(42)
     lcmb =  szpac(46)
@@ -2316,7 +2312,7 @@ subroutine direction_adjusment(szpac,LV,RV)
 
     DF = LV
 
-    if( szpac(91) < 0) then
+    if( szpac(91) > 0) then
         DI=DF
         call rotxyz(3,-lcmb,DI,DF)   
         DI=DF
@@ -2419,6 +2415,18 @@ subroutine parameter_names(print_names,szpac,szpan)
     szpan(22) = "rho_0"
     szpan(24) = "c"
     szpan(30) = "z_init"
+    szpan(31) = "rho_m,in"
+    szpan(32) = "H_in"
+    szpan(33) = "t_0-t_in"
+    szpan(34) = "t_in"    
+    szpan(41) = "Sz-dip-l"
+    szpan(42) = "Sz-dip-b"    
+    szpan(43) = "180/pi"
+    szpan(44) = "pi/180"
+    szpan(45) = "pi"
+    szpan(46) = "CMB l_g"
+    szpan(47) = "CMB b_g"    
+    szpan(48) = "CMB rot"
     szpan(51) = "contrast"
     szpan(52) = "radius"
     szpan(53) = "slope" 
@@ -2447,7 +2455,7 @@ subroutine parameter_values(npypac,pypac, npyszek,pyszek, szpac)
     double precision :: omega_lambda,omega_photon,omega_radiation,omega_curvature
     double precision :: w_matter,w_lambda,w_baryon,w_cold,w_photon,w_radiation
     double precision :: mass_unit,length_unit,time_unit,pi,G0,c0,T0,Neff,sbc,gcons,light_speed,kap,kapc2,gkr,gcr,lambda
-    
+    double precision :: omz,okz,orz,olz 
 
 ! szpac:: contains parameters by convention:
 ! szpac(1-50)   -> parameters relate to homogeneous background
@@ -2514,6 +2522,10 @@ subroutine parameter_values(npypac,pypac, npyszek,pyszek, szpac)
     w_cold = omega_cold/(little_h*little_h)  
 
 
+    omz = omega_matter*((1.0d0 + z_initial)**3)
+    okz = omega_curvature*((1.0d0 + z_initial)**2)
+    orz = omega_radiation*((1.0d0 + z_initial)**4)
+    olz = omega_lambda
 
 
     szpac(1) = H0
@@ -2542,7 +2554,7 @@ subroutine parameter_values(npypac,pypac, npyszek,pyszek, szpac)
 
     szpac(30) = z_initial
     szpac(31) = gkr*( (1.0d0 + z_initial)**3)
-
+    szpac(32) = szpac(11)*sqrt(orz+omz+okz+olz)
 
     szpac(43) = 180.0/pi
     szpac(44) = pi/180.0d0

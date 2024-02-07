@@ -1,2 +1,1 @@
-rm *.so
 python3 -m numpy.f2py -c --verbose --opt='-fopenmp -O3' -lgomp szekeres_fortran.f90 -m szekeres_fortran

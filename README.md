@@ -45,7 +45,7 @@ Open the file `sample.py` and follow the sample calculations and examples presen
 - Example 7: plotting a path of the light ray, t(R), featuring the apparent horizon (depending on the parameters of the model, somewhere around R ~ 2,000 Mpc - 5,000 Mpc).
 - Example 8: plotting the angular diameter distance
 - Example 9: plotting the luminosity distance
-- Example 10: four sky maps: CMB, column density contrast, column expansion rate, shear (to run, set `run_example_10 = True`)
+- Example 10: four sky maps: CMB, line of sight density contrast, line of sight expansion rate, line of sight Weyl (to run, set `run_example_10 = True`)
 
 ## Development plans
 

@@ -1,2 +1,1 @@
-rm *.so
 python3 -m numpy.f2py -c --verbose --opt='-O3' szekeres_fortran.f90 -m szekeres_fortran

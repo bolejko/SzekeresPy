@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.43 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.44 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: SzekeresPy.py
 # 
@@ -495,6 +495,8 @@ class Szekeres:
         sky_rotation  = 170.0     
         arbitraty_rotation = True
         
+        self.szpar[7] = sky_rotation 
+
         if arbitraty_rotation:
             point = 0.0,obs[0],obs[1],obs[2],redshift,2.0,sky_rotation        
         else: 
@@ -619,8 +621,6 @@ SzekeresModel = initiate()
 
 
 
-
-
 # FIX needed: 
 # full specification requires
 #   - background cosmology
@@ -630,3 +630,16 @@ SzekeresModel = initiate()
 #   - redshift (array or float)
 
 
+# state register:
+#   - background cosmology:
+#    >> cospar
+
+#   - Szekeres parameters
+#   - Observer's locations, including orientation of the observer's sky
+
+#    >> szpar[0-3] - Szekeres
+#    >> szpar[5] 
+#    >> szpar[6] 
+#    >> szpar[7] - arbitrary rotation
+#    >> szpar[8] - l direction to CMB max
+#    >> szpar[9] - b direction to CMB max

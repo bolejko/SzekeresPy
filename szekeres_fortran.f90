@@ -1,5 +1,5 @@
 !########################################################################################################
-! SzekeresPy ver. 0.43 - Python package for cosmological calculations using the Szekeres Cosmological Model
+! SzekeresPy ver. 0.44 - Python package for cosmological calculations using the Szekeres Cosmological Model
 ! 
 ! File: szekeres_fortran.f90
 ! 

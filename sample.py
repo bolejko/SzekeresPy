@@ -1,5 +1,5 @@
 #########################################################################################################
-# SzekeresPy ver. 0.44 - Python package for cosmological calculations using the Szekeres Cosmological Model
+# SzekeresPy ver. 0.45 - Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: sample.py
 # 
@@ -29,15 +29,15 @@ import matplotlib.pyplot as plt
 import healpy as hp
 
 
-run_example_1  = False    
-run_example_2  = False
-run_example_3  = False
-run_example_4  = False
-run_example_5  = False
-run_example_6  = False
-run_example_7  = False
-run_example_8  = False
-run_example_9  = False
+run_example_1  = True
+run_example_2  = True
+run_example_3  = True
+run_example_4  = True
+run_example_5  = True
+run_example_6  = True
+run_example_7  = True
+run_example_8  = True
+run_example_9  = True
 run_example_10 = True
 
 
@@ -210,15 +210,16 @@ if run_example_7:
 
 
 #-------------------------------------------------------------
-#>>>> EXAMPLE 8: #angular diameter distance
+#>>>> EXAMPLE 8: #angular diameter distance-redshift relations
 # to get the angular diameter distance you need to specify:
 #  (i) the position of the observer
 #  (ii) the direction
 #  (iii) the redshift (can be a number, but for plotting an array is required)
-#-------------------------------------------------------------r =50.0 
+#-------------------------------------------------------------
 
 if run_example_8:
    
+    r =50.0 
     theta = 0.25*np.pi   
     phi = 1.25*np.pi
     RA = 10.0

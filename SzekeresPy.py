@@ -1,24 +1,38 @@
-#########################################################################################################
-# SzekeresPy ver. 0.45 - Python package for cosmological calculations using the Szekeres Cosmological Model
+####################################################################################
+# SzekeresPy ver. 0.46 
+# Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: SzekeresPy.py
 # 
-# Author: Krzysztof Bolejko
+# Author: Krzysztof Bolejko, krzysztof.bolejko@utas.edu.au
 # 
 # Intended use: research and education
 # 
-# Licence to use: BSD-2-Clause ("FreeBSD License")
+# BSD 2-Clause License
 # 
-# Copyright (c) 2024 Krzysztof Bolejko
+# Copyright (c) 2024, Krzysztof Bolejko
 # 
-# Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 # 
-# 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
 # 
-# 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
 # 
-# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#########################################################################################################
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+####################################################################################
 
 
 import szekeres_fortran as fortran
@@ -43,8 +57,9 @@ class Szekeres:
         self.states = [[*self.cospar,*self.szpar]]
         self.NSIDE = 16
   
-    def All(self): #returns all values      
-        return self.cospar,self.szpar
+    def version(self): #returns all values
+    	ver = 0.46
+    	print("SzekeresPy, version:",ver)  
 
 
     def E(self,z):
@@ -527,14 +542,18 @@ class Szekeres:
             weyl_map = CMB_rot.rotate_map_pixel(wey)
 
 
-
-
-
 # FIX needed: the above is in the galactic coordinats, not equorial 
 
         return density_map, expansion_map, shear_map, weyl_map
 
 
+    def averaging(self,observer,domain):
+        print("Example 11: work in progress")
+        rho_av = 1.0
+        exp_av = 1.0
+        shr_av = 1.0
+        wey_av = 1.0
+        return rho_av, exp_av, shr_av, wey_av
 
 def initiate(astropy_cosmo=None, inhomog_cosmo=None):
   cospar = np.zeros(15)

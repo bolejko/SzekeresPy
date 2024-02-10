@@ -1,24 +1,38 @@
-!########################################################################################################
-! SzekeresPy ver. 0.45 - Python package for cosmological calculations using the Szekeres Cosmological Model
+!###################################################################################
+! SzekeresPy ver. 0.46 
+! Python package for cosmological calculations using the Szekeres Cosmological Model
 ! 
 ! File: szekeres_fortran.f90
 ! 
-! Author: Krzysztof Bolejko
+! Author: Krzysztof Bolejko, krzysztof.bolejko@utas.edu.au
 ! 
 ! Intended use: research and education
 ! 
-! Licence to use: BSD-2-Clause ("FreeBSD License")
+! BSD 2-Clause License
 ! 
-! Copyright (c) 2024 Krzysztof Bolejko
+! Copyright (c) 2024, Krzysztof Bolejko
 ! 
-! Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+! Redistribution and use in source and binary forms, with or without
+! modification, are permitted provided that the following conditions are met:
 ! 
-! 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+! 1. Redistributions of source code must retain the above copyright notice, this
+!    list of conditions and the following disclaimer.
 ! 
-! 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+! 2. Redistributions in binary form must reproduce the above copyright notice,
+!    this list of conditions and the following disclaimer in the documentation
+!    and/or other materials provided with the distribution.
 ! 
-! THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-!########################################################################################################
+! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+! AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+! IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+! DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+! FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+! DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+! SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+! CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+! OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+! OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+!###################################################################################
 
 
 program szekeres_fortran
@@ -390,7 +404,7 @@ subroutine link_density(INTERFACE_FIX_REQUIRED,ND,input_data,density,expansion,s
     double precision, dimension(npoint)  :: point,direction
     double precision, dimension(npoint)  :: szpoint,szdirection    
     double precision, dimension(0:5) :: tempi
-    double precision :: ageTO, ageFROM,dav,zlim,RAi,DECi,Lmax,Bmax,lt,bt
+    double precision :: ageTO, ageFROM,dav,zlim,Lmax,Bmax
     double precision, dimension (100) :: szpac  
     INTERFACE_FIX_REQUIRED = 1 
     szpac(100) = 2
@@ -421,7 +435,7 @@ subroutine link_density(INTERFACE_FIX_REQUIRED,ND,input_data,density,expansion,s
     ageTO = szpac(34)
 
 !$OMP PARALLEL DO DEFAULT(NONE) &
-!$OMP PRIVATE(ig,szpac,szpoint,szdirection,RAi,DECi,lt,bt,zlim,tempi) &
+!$OMP PRIVATE(ig,szpac,szpoint,szdirection,zlim,tempi) &
 !$OMP SHARED(ngrid,RA,DEC,pypac,pyszek,point,Lmax,Bmax,ageTO, ageFROM,density,expansion,shear,weyl)
     do ig=0,ngrid-1
 

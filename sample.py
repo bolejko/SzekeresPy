@@ -1,24 +1,38 @@
-#########################################################################################################
-# SzekeresPy ver. 0.45 - Python package for cosmological calculations using the Szekeres Cosmological Model
+####################################################################################
+# SzekeresPy ver. 0.46 
+# Python package for cosmological calculations using the Szekeres Cosmological Model
 # 
 # File: sample.py
 # 
-# Author: Krzysztof Bolejko
+# Author: Krzysztof Bolejko, krzysztof.bolejko@utas.edu.au
 # 
 # Intended use: research and education
 # 
-# Licence: BSD-2-Clause ("FreeBSD License")
+# BSD 2-Clause License
 # 
-# Copyright (c) 2024 Krzysztof Bolejko
+# Copyright (c) 2024, Krzysztof Bolejko
 # 
-# Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 # 
-# 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
 # 
-# 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
 # 
-# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#########################################################################################################
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+####################################################################################
 
 
 from SzekeresPy import SzekeresModel as szekeres_cosmo  
@@ -27,6 +41,7 @@ from SzekeresPy import SzekeresModel as szekeres_cosmo
 import numpy as np
 import matplotlib.pyplot as plt
 import healpy as hp
+
 
 
 run_example_1  = True
@@ -39,14 +54,16 @@ run_example_7  = True
 run_example_8  = True
 run_example_9  = True
 run_example_10 = True
+run_example_11 = True
 
-
+run_all_overide = None
+run_none_overide = None
 
 #-------------------------------------------------------------
 #>>>> EXAMPLE 1: checking and updating cosmological parameters 
 #-------------------------------------------------------------
 
-if run_example_1:
+if (run_example_1 or run_all_overide) and not run_none_overide:
 
     redshift = 0.15
     H = szekeres_cosmo.H(redshift)
@@ -70,7 +87,7 @@ if run_example_1:
 #>>>> EXAMPLE 2: Using astropy to set the cosmological parameters
 #-------------------------------------------------------------
 
-if run_example_2:
+if (run_example_2 or run_all_overide) and not run_none_overide:
 
     from astropy.cosmology import Planck18  as  astropy_cosmo
     import SzekeresPy
@@ -83,7 +100,7 @@ if run_example_2:
 #-------------------------------------------------------------
 #setting the position of the observer, and checking the density, expansion, shear, weyl curvature at their locations 
 
-if run_example_3:
+if (run_example_3 or run_all_overide) and not run_none_overide:
 
     t = 0 
     r = 10.0 
@@ -100,7 +117,7 @@ if run_example_3:
 # density, expansion scalar, shear scalar, Weyl curvature scalar
 #-------------------------------------------------------------
 
-if run_example_4:
+if (run_example_4 or run_all_overide) and not run_none_overide:
 
     redshift = 0.34 
     r = 50.0   # this will be (approximetly) the max R
@@ -119,7 +136,7 @@ if run_example_4:
 # and comparring density in 2 different directions
 #-------------------------------------------------------------
 
-if run_example_5:
+if (run_example_5 or run_all_overide) and not run_none_overide:
 
     redshift = 0.45
     r = 50.0   # this will be (approximetly) the max R
@@ -145,7 +162,7 @@ if run_example_5:
 # - only redshift = 0
 #-------------------------------------------------------------
 
-if run_example_6:
+if (run_example_6 or run_all_overide) and not run_none_overide:
 
     X_axis, Y_axis, Z_density, Z_expansion, Z_shear, Z_weyl =  szekeres_cosmo.fluid_2d(x = 5)
     plt.figure()
@@ -181,7 +198,7 @@ if run_example_6:
 #  (iii) the redshift (can be a number, but for plotting an array is required)
 #-------------------------------------------------------------
 
-if run_example_7:
+if (run_example_7 or run_all_overide) and not run_none_overide:
 
 
     r =50.0 
@@ -217,7 +234,7 @@ if run_example_7:
 #  (iii) the redshift (can be a number, but for plotting an array is required)
 #-------------------------------------------------------------
 
-if run_example_8:
+if (run_example_8 or run_all_overide) and not run_none_overide:
    
     r =50.0 
     theta = 0.25*np.pi   
@@ -250,8 +267,7 @@ if run_example_8:
 #  (iii) the redshift (can be a number, but for plotting an array is required)
 #-------------------------------------------------------------
 
-
-if run_example_9:
+if (run_example_9 or run_all_overide) and not run_none_overide:
 
     r =20.0 
     theta = 0.25*np.pi   
@@ -283,9 +299,7 @@ if run_example_9:
 # depending on a machine could be more than 10 minutes (if run without openmp)
 # if you have time to run it, change the flag below to True
 
-
-
-if run_example_10:
+if (run_example_10 or run_all_overide) and not run_none_overide:
 
     r =35.0 
     theta = 0.4*np.pi   
@@ -304,3 +318,17 @@ if run_example_10:
     plt.show()
     hp.mollview(weyl_map,title="Weyl curvature along the line of sight (normalised)")
     plt.show()
+
+
+#-------------------------------------------------------------
+#>>>> EXAMPLE 11: #averaging - Work in progress
+
+if (run_example_11 or run_all_overide) and not run_none_overide:
+
+    r =35.0 
+    theta = 0.4*np.pi   
+    phi = 0.5*np.pi
+    observer = r, theta, phi
+    domain_radius = 5.0
+
+    rho_av, exp_av, shr_av, wey_av =  szekeres_cosmo.averaging(observer,domain_radius) 
